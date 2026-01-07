@@ -43,6 +43,7 @@ install_requires = [
     "transformers",
     "wandb",
     "packaging>=20.0",
+    "math_verify",
 ]
 
 TEST_REQUIRES = ["pytest", "pre-commit", "py-spy", "pytest-asyncio"]
