@@ -32,13 +32,13 @@ if [ -z "$MODEL_PATH" ]; then
 fi
 
 # Train over 4 nodes, 8 A100-80GB GPUs per node.
-CUDA_VISIBLE_DEVICES=1,2 python3 -m verl.trainer.main_ppo \
+python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo_process \
     reward_model.reward_manager=grpo_process \
     custom_reward_function.path=recipe/multi_prm/reward_function.py \
     data.train_files=deepscaler/data/train_deepscaler.parquet \
     data.val_files=deepscaler/data/aime.parquet \
-    data.train_batch_size=2 \
+    data.train_batch_size=128 \
     data.val_batch_size=512 \
     data.max_prompt_length=1024 \
     data.max_response_length=16384 \
@@ -72,11 +72,11 @@ CUDA_VISIBLE_DEVICES=1,2 python3 -m verl.trainer.main_ppo \
     trainer.project_name=${PROJECT_NAME} \
     trainer.experiment_name=${EXPERIMENT_NAME} \
     trainer.val_before_train=True \
-    trainer.n_gpus_per_node=2 \
-    trainer.nnodes=1 \
-    trainer.save_freq=1 \
+    trainer.n_gpus_per_node=8 \
+    trainer.nnodes=4 \
+    trainer.save_freq=10 \
     trainer.test_freq=10 \
     trainer.default_hdfs_dir=null \
-    trainer.total_training_steps=1000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}.log
+    trainer.total_training_steps=2000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}.log
 
     # actor_rollout_ref.actor.fsdp_config.gradient_offload=False \
