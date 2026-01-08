@@ -110,10 +110,10 @@ def call_generative_prm_api(client, messages, vllm_api_base=None) -> str:
             chat_completion = client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=1.0,
-                top_p=0.95,
+                temperature=0.7,
+                top_p=0.8,
                 extra_body={
-                    "chat_template_kwargs": {"thinking": False}
+                    "chat_template_kwargs": {"enable_thinking": False}
                 }
             )
             

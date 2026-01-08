@@ -28,7 +28,7 @@ huggingface-cli download DeepSeek-R1-Distill-Qwen-1.5B \
 
 多卡，修改显卡数量与-dp后面的数字对应：
 ```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 vllm serve ${your_DeepSeek-V3.2} --max-model-len 16384 --host 0.0.0.0 --port 8000 -dp 8 --enable-expert-parallel
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 vllm serve ${your_Qwen3-32B} --max-model-len 16384 --host 0.0.0.0 --port 8000 -dp 8 -tp 8
 ```
 
 ### 训练

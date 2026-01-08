@@ -28,27 +28,35 @@ from verl.workers.reward_manager import register
 # -----------------------
 # Step split keywords
 # -----------------------
+# SUMMARY_KEYWORDS = [
+#     "therefore,",
+#     "alright,",
+#     "hmm,",
+#     "actually,",
+#     "alternatively,",
+#     "first,",
+#     "second,",
+#     "then,",
+#     "next,",
+#     "finally,",
+# ]
+
+# CONCLUSION_KEYWORDS = [
+#     "let me",
+#     "let's",
+#     "check",
+#     "double-check",
+#     "verify",
+#     "step by step",
+#     "we have",
+# ]
+
 SUMMARY_KEYWORDS = [
-    "therefore,",
-    "alright,",
-    "hmm,",
-    "actually,",
-    "alternatively,",
-    "first,",
-    "second,",
-    "then,",
-    "next,",
-    "finally,",
+    'first,', 'then,', 'next,', 'finally,', 'step by step', 'my plan is', "I'll start with", 'followed by'
 ]
 
 CONCLUSION_KEYWORDS = [
-    "let me",
-    "let's",
-    "check",
-    "double-check",
-    "verify",
-    "step by step",
-    "we have",
+
 ]
 
 # Regex patterns
@@ -390,7 +398,7 @@ class ProcessRewardManager:
                         think_text,
                         SUMMARY_KEYWORDS,
                         CONCLUSION_KEYWORDS,
-                        require_both=True,
+                        require_both=False,
                     )
 
                     if step_starts:
