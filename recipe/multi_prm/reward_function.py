@@ -25,8 +25,15 @@ from verl.utils.reward_score import math_verify
 # Configuration
 # -----------------------
 # vLLM API 配置
-api_key = "sk-q2DU5iOZa6s5I4B0XhxzbvtWImIyfDlPFHggYpqqdTMvVmKx"
-base_url = "https://api.bltcy.ai/v1/"
+VLLM_API_KEY = "EMPTY"
+VLLM_API_BASE = "http://localhost:8000/v1"  # 修改为你的 vLLM 服务地址
+
+# API 调用配置
+MAX_RETRIES = 5
+BASE_DELAY = 2
+MAX_WORKERS = 8
+TIMEOUT = 5000
+
 # Regex for parsing step scores
 # STEP_LINE_PATTERN = re.compile(
 #     r'<step_(\d+)>.*?boxed{([01])}.*?</step_\1>',
@@ -77,19 +84,53 @@ Your Verification:
 # vLLM API 调用函数
 # ============================================================================
 
-def _post_chat_completion(client, messages) -> str:
-    """Get response from OpenAI API with retry logic."""
-    try:
-        response = client.chat.completions.create(
-            model="deepseek-v3.2",
-            messages=messages,
-            temperature=0,
-            max_tokens=8192
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"Error in get_response_with_retry: {str(e)}")
-        return ""
+def call_generative_prm_api(client, messages, vllm_api_base=None) -> str:
+    """
+    调用生成式 PRM API 获取验证结果
+    
+    Args:
+        question: 问题文本
+        tagged_solution: 带 <step> 标签的解答
+        step_count: 步骤数量
+        vllm_api_base: vLLM API 基础 URL
+    
+    Returns:
+        verification_response: PRM 生成的验证文本
+    """
+    if vllm_api_base is None:
+        vllm_api_base = VLLM_API_BASE
+    
+    for attempt in range(MAX_RETRIES):
+        try:
+            # 获取模型列表
+            models = client.models.list()
+            model = models.data[0].id
+            
+            # 调用 Chat Completion API
+            chat_completion = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=1.0,
+                top_p=0.95,
+                extra_body={
+                    "chat_template_kwargs": {"thinking": False}
+                }
+            )
+            
+            # 提取响应文本
+            # reasoning_content = chat_completion.choices[0].message.reasoning
+            verification_response = chat_completion.choices[0].message.content
+            return verification_response
+            
+        except Exception as e:
+            if attempt < MAX_RETRIES - 1:
+                print(f"Generative PRM API call failed (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
+                delay = BASE_DELAY * (2 ** attempt)
+                sleep(delay)
+            else:
+                print(f"Generative PRM API call failed after {MAX_RETRIES} attempts: {e}")
+                return None
+    return None
 
 def compute_outcome_reward(response: str, ground_truth: Any) -> float:
     """
