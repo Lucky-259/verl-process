@@ -53,11 +53,11 @@ def default_compute_score(
         # Note: Math-Verify needs to be manually installed via pip: `pip install math-verify`.
         # To use it, override the `compute_score` function with the following implementation:
     
-    elif data_source == "deepscaler":
+    elif data_source == "deepscaler" or data_source.startswith("aime"):
         from . import math_verify
         res = math_verify.compute_score(solution_str, ground_truth)
 
-    elif data_source == "math_dapo" or data_source.startswith("aime"):
+    elif data_source == "math_dapo":
         from . import math_dapo
 
         res = math_dapo.compute_score(solution_str, ground_truth)
