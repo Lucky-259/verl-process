@@ -58,5 +58,6 @@ python3 -m verl.trainer.main_ppo \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
     trainer.save_freq=20 \
-    trainer.test_freq=20 \
-    trainer.total_training_steps=2000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}.log
+    trainer.test_freq=100 \
+    trainer.default_local_dir="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}" \
+    trainer.total_training_steps=2000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}.log
