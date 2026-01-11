@@ -15,7 +15,7 @@
 from collections import defaultdict
 
 from verl import DataProto
-from verl.utils.reward_score import _default_compute_score
+from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import register
 from verl.utils.reward_score import math
 
@@ -26,11 +26,10 @@ class ShorterRewardManager:
     """The reward manager.
     """
 
-    def __init__(self, tokenizer, num_examine, train_batch_size, num_generation, compute_score=None, reward_fn_key="data_source") -> None:
+    def __init__(self, tokenizer, num_examine, num_generation, compute_score=None, reward_fn_key="data_source") -> None:
         self.tokenizer = tokenizer
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
-        self.compute_score = compute_score or _default_compute_score
-        self.train_batch_size = train_batch_size
+        self.compute_score = compute_score or default_compute_score
         self.num_generation = num_generation
         self.reward_fn_key = reward_fn_key
 
@@ -73,10 +72,9 @@ class ShorterRewardManager:
 
     def check_correctness_and_length(self, data):
         """in GRPO, the input data here should have len=train_batch_size * num_generations(i.e. config.actor_rollout_ref.rollout.n)"""
-        train_batch_size = self.train_batch_size
         num_generation = self.num_generation
         
-        assert len(data) == train_batch_size * num_generation, f"Implementation Error: the input data should have len={train_batch_size * num_generation}, where train_batch_size={train_batch_size}, num_generation={num_generation}, while len(data)={len(data)}"
+        assert len(data) % num_generation == 0, f"Implementation Error: the input data len(data)={len(data)} does not divide num_generation={num_generation} evenly."
         
         # Extract unique problem IDs to group responses
         problem_ids = [item.non_tensor_batch['index'] for item in data] # ids of problems of this {batch*rollout_n}
@@ -84,9 +82,6 @@ class ShorterRewardManager:
         for pid in problem_ids:
             if pid not in unique_problem_ids:
                 unique_problem_ids.append(pid) # ids of problem of this batch (unique)
-        
-        # Should have train_batch_size unique problems
-        assert len(unique_problem_ids) == train_batch_size, f"Expected {train_batch_size} unique problems, got {len(unique_problem_ids)}"
         
         # Create a mapping from data index to results
         correctness_map = {}
