@@ -15,7 +15,7 @@ ROOT_DIR=/mnt/hdfs/if_au/saves/cky
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 
 PROJECT_NAME='ShorterBetter'
-EXPERIMENT_NAME='DS1.5B_8k_shorter'
+EXPERIMENT_NAME='DS1.5B_16k_shorter'
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
