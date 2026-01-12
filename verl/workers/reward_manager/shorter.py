@@ -26,12 +26,13 @@ class ShorterRewardManager:
     """The reward manager.
     """
 
-    def __init__(self, tokenizer, num_examine, num_generation, compute_score=None, reward_fn_key="data_source") -> None:
+    def __init__(self, tokenizer, num_examine, num_generation, compute_score=None, reward_fn_key="data_source", beta=0.001) -> None:
         self.tokenizer = tokenizer
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
         self.compute_score = compute_score or default_compute_score
         self.num_generation = num_generation
         self.reward_fn_key = reward_fn_key
+        self.beta = beta
 
     def verify(self, data):
         scores = []
@@ -182,7 +183,7 @@ class ShorterRewardManager:
         def sb_compute_score(optimal_length, completion_length, correct_or_not):
             """return the reward score based on sb func; optimal length is the shortest length among all correct completions"""
             alpha = 2.0
-            beta = 0.001
+            beta = self.beta
             if correct_or_not == True:
                 correctness = alpha
             else:

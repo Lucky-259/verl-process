@@ -5,6 +5,7 @@ cd /opt/tiger/hqz_debug/cky/verl-process
 
 pip install math_verify
 
+export NCCL_DEBUG=WARN
 export PROJECT_HOME="verl-process"
 export LOG_DIR="/path/to/logs"
 export PYTHONPATH="${PROJECT_HOME}:$PYTHONPATH"

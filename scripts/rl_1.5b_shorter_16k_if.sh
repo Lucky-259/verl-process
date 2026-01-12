@@ -5,6 +5,7 @@ cd /opt/tiger/hqz_debug/cky/verl-process
 
 pip install math_verify
 
+export NCCL_DEBUG=WARN
 export PROJECT_HOME="verl-process"
 export LOG_DIR="/path/to/logs"
 export PYTHONPATH="${PROJECT_HOME}:$PYTHONPATH"
@@ -15,17 +16,19 @@ ROOT_DIR=/mnt/hdfs/if_au/saves/cky
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 
 PROJECT_NAME='ShorterBetter'
-EXPERIMENT_NAME='DS1.5B_16k_shorter'
+EXPERIMENT_NAME='DS1.5B_16k_shorter_1e-4'
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     reward_model.reward_manager=shorter \
+    +reward_model.reward_kwargs.beta=0.0001 \
     data.train_files=deepscaler/data/train_deepscaler.parquet \
     data.val_files=deepscaler/data/aime.parquet \
     data.train_batch_size=128 \
     data.val_batch_size=512 \
     data.max_prompt_length=2048 \
     data.max_response_length=16384 \
+    data.filter_overlong_prompts=True \
     actor_rollout_ref.model.path="${MODEL_PATH}" \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
