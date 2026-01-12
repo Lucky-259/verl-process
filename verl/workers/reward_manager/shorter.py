@@ -134,14 +134,11 @@ class ShorterRewardManager:
             # the shortest correct response length is selected as optimal length
             correct_lengths = [l for c, l in zip(correctnesses_given_prompt, response_lengths_given_prompt) if c]
 
-
             # --------------------------------------------------
             # TEST: WHAT IF JUST CHOOSE THE MIN LENGTH, REGRARDLESS OF CORRECTNESS?
             optimal_length = min(correct_lengths) if correct_lengths else sum(response_lengths_given_prompt)/len(response_lengths_given_prompt)
             # optimal_length = min(response_lengths_given_prompt) else avg
             # --------------------------------------------------
-
-
 
             # Just print a compact summary line for each problem
             correct_count = sum(correctnesses_given_prompt)
@@ -221,8 +218,13 @@ class ShorterRewardManager:
             extra_info = data_item.non_tensor_batch.get("extra_info", {})
             num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
             extra_info["num_turns"] = num_turns
-
-            score = sb_compute_score(optimal_length, completion_length, correct_or_not)
+            split = extra_info.get("split", "train")
+    
+            # 如果是测试集，使用默认评分
+            if split == "test":
+                score = default_compute_score(data_source, response_str, ground_truth, extra_info)
+            else: 
+                score = sb_compute_score(optimal_length, completion_length, correct_or_not)
 
             if isinstance(score, dict):
                 reward = score["score"]
@@ -232,7 +234,7 @@ class ShorterRewardManager:
             else:
                 reward = score
 
-            reward_tensor[i, valid_response_length - 1] = score
+            reward_tensor[i, valid_response_length - 1] = reward
 
             if data_source not in already_print_data_sources:
                 already_print_data_sources[data_source] = 0
