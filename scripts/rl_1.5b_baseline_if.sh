@@ -26,6 +26,7 @@ python3 -m verl.trainer.main_ppo \
     data.val_batch_size=512 \
     data.max_prompt_length=2048 \
     data.max_response_length=16384 \
+    data.filter_overlong_prompts=True \
     actor_rollout_ref.model.path="${MODEL_PATH}" \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
@@ -57,7 +58,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.val_before_train=True \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=20 \
+    trainer.save_freq=100 \
     trainer.test_freq=100 \
     trainer.default_local_dir="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}" \
-    trainer.total_training_steps=2000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}.log
+    trainer.total_training_steps=2000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}.log
