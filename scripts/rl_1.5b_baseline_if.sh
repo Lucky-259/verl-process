@@ -16,7 +16,7 @@ ROOT_DIR=/mnt/hdfs/if_au/saves/cky
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 
 PROJECT_NAME="GRPO_Process"
-EXPERIMENT_NAME="DS1.5B_16k_baseline"
+EXPERIMENT_NAME="DS1.5B_8k_baseline"
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -26,7 +26,7 @@ python3 -m verl.trainer.main_ppo \
     data.train_batch_size=128 \
     data.val_batch_size=512 \
     data.max_prompt_length=2048 \
-    data.max_response_length=16384 \
+    data.max_response_length=8192 \
     data.filter_overlong_prompts=True \
     actor_rollout_ref.model.path="${MODEL_PATH}" \
     actor_rollout_ref.model.use_remove_padding=True \
@@ -60,6 +60,6 @@ python3 -m verl.trainer.main_ppo \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
     trainer.save_freq=100 \
-    trainer.test_freq=100 \
+    trainer.test_freq=200 \
     trainer.default_local_dir="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}" \
-    trainer.total_training_steps=2000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}_300.log
+    trainer.total_training_steps=1000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}.log
