@@ -166,10 +166,10 @@ def find_first_conclusion_mention(
 
         first_i = None
         for i, obj in enumerate(sents):
-            sent = obj["text"]
-            if ans_pat.search(sent.lower()) is not None:
+            sent = obj["text"].lower()
+            if ans_pat.search(sent) is not None:
                 has_conclusion = any(cue in sent for cue in TIGHT_CONCLUSION_CUES) or any(cue in sent for cue in LOOSE_CONCLUSION_CUES) or  "\\boxed" in sent
-                has_verification = any(cue in (sents[i+1]["text"] if i+1 < len(sents) else "") for cue in VERIFICATION_CUES)
+                has_verification = any(cue in (sents[i+1]["text"].lower() if i+1 < len(sents) else "") for cue in VERIFICATION_CUES)
                 if has_conclusion or has_verification:
                     first_i = i
                     break
