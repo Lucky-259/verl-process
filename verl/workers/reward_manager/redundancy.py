@@ -15,6 +15,7 @@
 import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
+from math_verify import parse, verify, ExprExtractionConfig, LatexExtractionConfig
 
 import torch
 
@@ -140,7 +141,7 @@ def build_answer_regex(boxed_answer: str) -> re.Pattern:
 
     return re.compile(re.escape(ans))
 
-def find_first_conclusion_mention(
+def find_first_conclusion_mention_1(
         think_text: str,
         boxed_answer: str,
     ) -> Dict[str, Any]:
@@ -201,11 +202,72 @@ def find_first_conclusion_mention(
             "all_matches": []
         }
 
+def find_first_conclusion_mention_2(
+    think_text: str,
+    boxed_answer: str,
+) -> Dict[str, Any]:
+    """
+    Find the first sentence that matches the answer (regex) and looks conclusion-like.
+    Returns: found, reason, first_idx/score, first_char_start, prev/sent/next, all_matches (idx, score).
+    """
+    sents = split_sentences_with_spans(think_text)
+    if not boxed_answer.strip():
+        return {
+            "found": False,
+            "reason": "EMPTY_BOXED_ANSWER",
+            "first_idx": None,
+            "first_score": None,
+            "first_char_start": None,
+            "prev": "",
+            "sent": "",
+            "next": "",
+            "all_matches": []
+        }
+    gold = parse("\\boxed{" + boxed_answer + "}", extraction_config=[LatexExtractionConfig()])
+
+    first_i = None
+    for i, obj in enumerate(sents):
+        sent = obj["text"].lower()
+        has_conclusion = any(cue in sent for cue in TIGHT_CONCLUSION_CUES) or any(cue in sent for cue in LOOSE_CONCLUSION_CUES) or "\\boxed" in sent
+        has_verification = any(cue in (sents[i+1]["text"].lower() if i+1 < len(sents) else "") for cue in VERIFICATION_CUES)
+        if has_conclusion or has_verification:
+            pred = parse(sent, extraction_config=[LatexExtractionConfig(), ExprExtractionConfig()])
+            if verify(gold, pred, timeout_seconds=10):
+                first_i = i
+                break
+    if not first_i:
+        return {
+            "found": False,
+            "reason": "ANSWER_NOT_FOUND_IN_THINK",
+            "first_idx": None,
+            "first_score": None,
+            "first_char_start": None,
+            "prev": "",
+            "sent": "",
+            "next": "",
+            "all_matches": []
+        }
+
+    prev_sent = sents[first_i - 1]["text"] if first_i - 1 >= 0 else ""
+    next_sent = sents[first_i + 1]["text"] if first_i + 1 < len(sents) else ""
+
+    return {
+        "found": True,
+        "reason": "",
+        "first_idx": first_i,
+        "first_score": None,
+        "first_char_start": sents[first_i]["end"],
+        "prev": prev_sent,
+        "sent": sents[first_i]["text"],
+        "next": next_sent,
+        "all_matches": []
+    }
+
 @register("redundancy")
 class RedundancyRewardManager:
     """The reward manager."""
 
-    def __init__(self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", alpha=1, beta=0.001) -> None:
+    def __init__(self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", alpha=1, beta=0.0001, way="correct") -> None:
         """
         Initialize the RedundancyRewardManager instance.
 
@@ -222,7 +284,8 @@ class RedundancyRewardManager:
         self.reward_fn_key = reward_fn_key  # Store the key for accessing the data source
         self.alpha = alpha
         self.beta = beta
-        print(f"==ALPHA==: {self.alpha}, ==BETA==: {self.beta}")
+        self.way = way
+        print(f"==ALPHA==: {self.alpha}, ==BETA==: {self.beta}, ==WAY==: {self.way}")
 
     def __call__(self, data: DataProto, return_dict=False):
         """We will expand this function gradually based on the available datasets"""
@@ -280,27 +343,41 @@ class RedundancyRewardManager:
                 reward = score
             
             # Calculate Verification Length
-            verification_length = 0
+            verification_length, think_length = 0, 0
             think, answer = split_think_answer(response_str)
             if think is not None:
+                think_ids = self.tokenizer.encode(think, add_special_tokens=False)
+                think_length = len(think_ids)
                 boxed = extract_final_boxed_answer(answer)
                 if boxed is not None:
                     boxed_answer = boxed
                     answer_in_prompt = prompt_contains_answer(prompt_str, boxed_answer)
                     if not answer_in_prompt:
-                        first = find_first_conclusion_mention(think, boxed_answer)
+                        if self.way == "base": # 方式一不用math_verify，只用正则找
+                            first = find_first_conclusion_mention_1(think, boxed_answer)
+                        else: # 方式二、三、四都用math_verify
+                            first = find_first_conclusion_mention_2(think, boxed_answer)
                         if first["found"]:
                             first_char_start = first["first_char_start"]
                             verification_length = count_tokens_from_char(self.tokenizer, think, first_char_start)
             
+            verification_ratio = verification_length / think_length if think_length > 0 else 0
+            
             # Compute Rollout Reward
             split =  extra_info.get("split", "train")
             if split == "train":
-                reward = self.alpha * reward - self.beta * reward * verification_length
+                if self.way == "ratio": # 方式三用比率惩罚，只惩罚正确的
+                    reward = self.alpha * reward - self.beta * reward * verification_ratio
+                elif self.way == "full": # 方式四用长度惩罚，正确的和错误的都惩罚
+                    reward = self.alpha * reward - self.beta * verification_length
+                else: # 方式一和方式二用长度惩罚，只惩罚正确的
+                    reward = self.alpha * reward - self.beta * reward * verification_length
+            
             metrics.append({
                 "split": split,
                 "outcome": score["score"] if isinstance(score, dict) else score,
                 "v_l": verification_length,
+                "v_p": verification_ratio,
                 "reward": reward,
                 #"response": response_str,
             })
