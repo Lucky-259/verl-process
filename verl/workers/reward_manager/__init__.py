@@ -20,7 +20,6 @@ from .prime import PrimeRewardManager
 from .process import ProcessRewardManager
 from .shorter import ShorterRewardManager
 from .redundancy import RedundancyRewardManager
-from .redundancy_update import RedundancyUpdateRewardManager
 
 # Note(haibin.lin): no need to include all reward managers here in case of complicated dependencies
 __all__ = [
@@ -31,7 +30,6 @@ __all__ = [
     "ProcessRewardManager",
     "ShorterRewardManager",
     "RedundancyRewardManager",
-    "RedundancyUpdateRewardManager",
     "register",
     "get_reward_manager_cls",
 ]
