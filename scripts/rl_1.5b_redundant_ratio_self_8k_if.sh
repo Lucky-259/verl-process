@@ -16,14 +16,15 @@ ROOT_DIR=/mnt/hdfs/if_au/saves/cky
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 
 PROJECT_NAME='Redundancy'
-EXPERIMENT_NAME='DS1.5B_8k_redundancy_ratio_self_1_1e-4'
+EXPERIMENT_NAME='DS1.5B_8k_redundancy_ratio_1_self'
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     reward_model.reward_manager=redundancy \
     +reward_model.reward_kwargs.alpha=1 \
-    +reward_model.reward_kwargs.beta=1e-4 \
-    +reward_model.reward_kwargs.way=ratio \
+    +reward_model.reward_kwargs.beta=1 \
+    +reward_model.reward_kwargs.extraction=self \
+    +reward_model.reward_kwargs.way=ratio_1 \
     data.train_files=deepscaler/data/train_deepscaler_filtered_plus.parquet \
     data.val_files=deepscaler/data/aime.parquet \
     data.train_batch_size=128 \

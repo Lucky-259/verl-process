@@ -16,6 +16,10 @@ import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 from math_verify import parse, verify, ExprExtractionConfig, LatexExtractionConfig
+import sys
+# sys.path.append('/mnt/luoyingfeng/changkaiyan/verl-process')
+sys.path.append('/opt/tiger/hqz_debug/cky/verl-process')
+from deepscaler.rewards.math_utils.utils import grade_answer_verl
 
 import torch
 
@@ -223,7 +227,6 @@ def find_first_conclusion_mention_2(
             "next": "",
             "all_matches": []
         }
-    gold = parse("\\boxed{" + boxed_answer + "}", extraction_config=[LatexExtractionConfig()])
 
     first_i = None
     for i, obj in enumerate(sents):
@@ -232,7 +235,7 @@ def find_first_conclusion_mention_2(
         has_verification = any(cue in (sents[i+1]["text"].lower() if i+1 < len(sents) else "") for cue in VERIFICATION_CUES)
         if has_conclusion or has_verification:
             pred = parse(sent, extraction_config=[LatexExtractionConfig(), ExprExtractionConfig()])
-            if verify(gold, pred, timeout_seconds=10):
+            if pred and grade_answer_verl("\\boxed{" + str(pred[-1]) + "}", boxed_answer):
                 first_i = i
                 break
     if not first_i:
@@ -267,7 +270,7 @@ def find_first_conclusion_mention_2(
 class RedundancyRewardManager:
     """The reward manager."""
 
-    def __init__(self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", alpha=1, beta=0.0001, way="correct") -> None:
+    def __init__(self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", alpha=1, beta=0.0001, extraction="self", way="correct") -> None:
         """
         Initialize the RedundancyRewardManager instance.
 
@@ -284,8 +287,9 @@ class RedundancyRewardManager:
         self.reward_fn_key = reward_fn_key  # Store the key for accessing the data source
         self.alpha = alpha
         self.beta = beta
+        self.extraction = extraction
         self.way = way
-        print(f"==ALPHA==: {self.alpha}, ==BETA==: {self.beta}, ==WAY==: {self.way}")
+        print(f"==ALPHA==: {self.alpha}, ==BETA==: {self.beta}, ==EXTRACT==: {self.extraction}, ==WAY==: {self.way}")
 
     def __call__(self, data: DataProto, return_dict=False):
         """We will expand this function gradually based on the available datasets"""
@@ -343,43 +347,52 @@ class RedundancyRewardManager:
                 reward = score
             
             # Calculate Verification Length
-            verification_length, think_length = 0, 0
             think, answer = split_think_answer(response_str)
-            if think is not None:
+            boxed = extract_final_boxed_answer(answer) if think else None
+            
+            if self.extraction == "self":
+                boxed_answer = boxed
+            else:
+                think = think if think else response_str
+                boxed_answer = ground_truth
+            
+            verification_length, think_length = 0, 0
+            if think and boxed_answer and not (self.way != "full" and reward == 0):
                 think_ids = self.tokenizer.encode(think, add_special_tokens=False)
                 think_length = len(think_ids)
-                boxed = extract_final_boxed_answer(answer)
-                if boxed is not None:
-                    boxed_answer = boxed
-                    answer_in_prompt = prompt_contains_answer(prompt_str, boxed_answer)
-                    if not answer_in_prompt:
-                        if self.way == "base": # 方式一不用math_verify，只用正则找
-                            first = find_first_conclusion_mention_1(think, boxed_answer)
-                        else: # 方式二、三、四都用math_verify
-                            first = find_first_conclusion_mention_2(think, boxed_answer)
-                        if first["found"]:
-                            first_char_start = first["first_char_start"]
-                            verification_length = count_tokens_from_char(self.tokenizer, think, first_char_start)
+                answer_in_prompt = prompt_contains_answer(prompt_str, boxed_answer)
+                if not answer_in_prompt:
+                    if self.way == "base": # 方式一不用math_verify，只用正则找
+                        first = find_first_conclusion_mention_1(think, boxed_answer)
+                    else: # 方式二、三、四都用math_verify
+                        first = find_first_conclusion_mention_2(think, boxed_answer)
+                    if first["found"]:
+                        first_char_start = first["first_char_start"]
+                        verification_length = count_tokens_from_char(self.tokenizer, think, first_char_start)
             
             verification_ratio = verification_length / think_length if think_length > 0 else 0
             
             # Compute Rollout Reward
             split =  extra_info.get("split", "train")
             if split == "train":
-                if self.way == "ratio": # 方式三用比率惩罚，只惩罚正确的
-                    reward = self.alpha * reward - self.beta * reward * verification_ratio
+                if self.way == "ratio_1": # 方式三用减去比率惩罚，正确和错误都惩罚
+                    reward = self.alpha * reward - self.beta * verification_ratio * reward
+                elif self.way == "ratio_2": # 方式三用乘以比率惩罚，正确和错误都惩罚
+                    reward = self.alpha * reward * (1 - self.beta * verification_ratio)
                 elif self.way == "full": # 方式四用长度惩罚，正确的和错误的都惩罚
                     reward = self.alpha * reward - self.beta * verification_length
                 else: # 方式一和方式二用长度惩罚，只惩罚正确的
-                    reward = self.alpha * reward - self.beta * reward * verification_length
+                    reward = self.alpha * reward - self.beta * verification_length * reward
             
             metrics.append({
                 "split": split,
+                "boxed_answer": boxed_answer if boxed_answer else "",
+                "ground_truth": ground_truth,
                 "outcome": score["score"] if isinstance(score, dict) else score,
                 "v_l": verification_length,
                 "v_p": verification_ratio,
                 "reward": reward,
-                #"response": response_str,
+                "response": response_str,
             })
 
             reward_tensor[i, valid_response_length - 1] = reward

@@ -23,6 +23,7 @@ python3 -m verl.trainer.main_ppo \
     reward_model.reward_manager=redundancy \
     +reward_model.reward_kwargs.alpha=1 \
     +reward_model.reward_kwargs.beta=2e-4 \
+    +reward_model.reward_kwargs.extraction=self \
     +reward_model.reward_kwargs.way=correct \
     data.train_files=deepscaler/data/train_deepscaler_filtered_plus.parquet \
     data.val_files=deepscaler/data/aime.parquet \
