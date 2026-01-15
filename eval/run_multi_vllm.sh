@@ -3,6 +3,7 @@ set -e
 
 cd /opt/tiger/hqz_debug/cky/verl-process
 
+pip install -e .
 pip install vertexai
 
 # 你的原脚本文件名
