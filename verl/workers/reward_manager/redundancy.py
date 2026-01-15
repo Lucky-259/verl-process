@@ -392,7 +392,7 @@ class RedundancyRewardManager:
                 "v_l": verification_length,
                 "v_p": verification_ratio,
                 "reward": reward,
-                "response": response_str,
+                # "response": response_str,
             })
 
             reward_tensor[i, valid_response_length - 1] = reward
