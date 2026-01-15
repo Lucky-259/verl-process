@@ -31,7 +31,7 @@ if [ ! -f "$SUMMARY_FILE" ]; then
 fi
 
 # ============ 全局 CSV（所有 jobs 一份，不覆盖）============
-GLOBAL_OUTPUT_ROOT="/mnt/luoyingfeng/changkaiyan/verl-process/eval/eval_results"
+GLOBAL_OUTPUT_ROOT="/mnt/hdfs/if_au/saves/cky/eval_results"
 GLOBAL_SUMMARY_FILE="$GLOBAL_OUTPUT_ROOT/all_jobs_summary_8k.csv"
 mkdir -p "$GLOBAL_OUTPUT_ROOT"
 if [ ! -f "$GLOBAL_SUMMARY_FILE" ]; then
@@ -134,7 +134,7 @@ for STEP_DIR in $CHECKPOINT_DIRS; do
     #    - 如果 details 不存在 -> 跑推理
     #    - 如果 summary 存在 -> 写入两个 CSV
     for DATA_NAME in "${DATASETS[@]}"; do
-        DATA_FILE="../deepscaler/data/test/${DATA_NAME}.json"
+        DATA_FILE="deepscaler/data/test/${DATA_NAME}.json"
         CURRENT_OUTPUT_DIR="$OUTPUT_ROOT/$STEP_NAME/$DATA_NAME"
         mkdir -p "$CURRENT_OUTPUT_DIR"
 
@@ -146,7 +146,7 @@ for STEP_DIR in $CHECKPOINT_DIRS; do
             echo "[Skip infer] details exists: $DETAILS_FILE"
         else
             if [ -f "$DATA_FILE" ]; then
-                python vllm_reason.py \
+                python eval/vllm_reason.py \
                     --model "$MODEL_PATH" \
                     --file "$DATA_FILE" \
                     --ports "$PORTS_STR" \
