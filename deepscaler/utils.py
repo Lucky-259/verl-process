@@ -7,18 +7,19 @@ import time
 from typing import List, Union
 
 import torch
-import vertexai
+# import vertexai
 import openai
-from google.cloud.aiplatform_v1beta1.types.content import SafetySetting
-from vertexai.generative_models import (
-    GenerationConfig,
-    GenerativeModel,
-    HarmBlockThreshold,
-    HarmCategory
-)
+# from google.cloud.aiplatform_v1beta1.types.content import SafetySetting
+# from vertexai.generative_models import (
+#     GenerationConfig,
+#     GenerativeModel,
+#     HarmBlockThreshold,
+#     HarmCategory
+# )
 from sentence_transformers import SentenceTransformer, util
 
-from deepscaler.globals import GCP_PROJECT_ID, GCP_LOCATION, GEMINI_MODEL, OAI_RM_MODEL
+# from deepscaler.globals import GCP_PROJECT_ID, GCP_LOCATION, GEMINI_MODEL, OAI_RM_MODEL
+from deepscaler.globals import OAI_RM_MODEL
 
 
 def call_oai_rm_llm(
@@ -71,89 +72,91 @@ def call_oai_rm_llm(
         return response.choices[0].message.content
     return [choice.message.content for choice in response.choices]
 
+def call_gemini_llm(*args, **kwargs):
+    raise NotImplementedError("call_gemini_llm 已移除，请改用 call_oai_rm_llm")
 
-def call_gemini_llm(
-    prompt: str,
-    system_prompt: str,
-    n: int = 1,
-    temperature: float = 1.0,
-    project_id: str = GCP_PROJECT_ID,
-    location: str = GCP_LOCATION,
-    model_id: str = GEMINI_MODEL,
-    retry_count: int = 1000000000
-) -> Union[str, List[str]]:
-    """Call Gemini LLM on Vertex AI with retry logic.
+# def call_gemini_llm(
+#     prompt: str,
+#     system_prompt: str,
+#     n: int = 1,
+#     temperature: float = 1.0,
+#     project_id: str = GCP_PROJECT_ID,
+#     location: str = GCP_LOCATION,
+#     model_id: str = GEMINI_MODEL,
+#     retry_count: int = 1000000000
+# ) -> Union[str, List[str]]:
+#     """Call Gemini LLM on Vertex AI with retry logic.
 
-    Args:
-        prompt: Text prompt to send to the model
-        system_prompt: System instruction for the model
-        n: Number of responses to generate
-        temperature: Sampling temperature
-        project_id: GCP project ID
-        location: GCP region
-        model_id: Gemini model resource name
-        retry_count: Number of retries on rate limit errors
+#     Args:
+#         prompt: Text prompt to send to the model
+#         system_prompt: System instruction for the model
+#         n: Number of responses to generate
+#         temperature: Sampling temperature
+#         project_id: GCP project ID
+#         location: GCP region
+#         model_id: Gemini model resource name
+#         retry_count: Number of retries on rate limit errors
 
-    Returns:
-        Generated text(s) from the model
+#     Returns:
+#         Generated text(s) from the model
 
-    Raises:
-        NotImplementedError: If API access is denied
-    """
-    vertexai.init(project=project_id, location=location)
+#     Raises:
+#         NotImplementedError: If API access is denied
+#     """
+#     vertexai.init(project=project_id, location=location)
 
-    harm_categories = [
-        HarmCategory.HARM_CATEGORY_UNSPECIFIED,
-        HarmCategory.HARM_CATEGORY_HARASSMENT,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    ]
+#     harm_categories = [
+#         HarmCategory.HARM_CATEGORY_UNSPECIFIED,
+#         HarmCategory.HARM_CATEGORY_HARASSMENT,
+#         HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+#         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+#         HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+#     ]
 
-    model = GenerativeModel(
-        model_name=model_id,
-        system_instruction=[system_prompt],
-    )
+#     model = GenerativeModel(
+#         model_name=model_id,
+#         system_instruction=[system_prompt],
+#     )
 
-    backoff = 1
-    retry_count = int(retry_count)
-    generation_config = GenerationConfig(
-        temperature=temperature,
-        candidate_count=n,
-    )
+#     backoff = 1
+#     retry_count = int(retry_count)
+#     generation_config = GenerationConfig(
+#         temperature=temperature,
+#         candidate_count=n,
+#     )
 
-    for _ in range(retry_count):
-        try:
-            response = model.generate_content(
-                [prompt],
-                generation_config=generation_config,
-                safety_settings=[
-                    SafetySetting(category=h, threshold=HarmBlockThreshold.BLOCK_NONE)
-                    for h in harm_categories
-                ]
-            )
-            break
-        except Exception as exc:
-            if "429" in str(exc):
-                print("Retry due to rate limit: ", exc)
-                time.sleep(backoff)
-                backoff = min(backoff * 2, 64)
-                continue
-            if "403" in str(exc):
-                print("NO ACCESS TO ENDPOINT", exc)
-                raise NotImplementedError("API access denied") from exc
-            print("Exception: ", exc)
-            return []
+#     for _ in range(retry_count):
+#         try:
+#             response = model.generate_content(
+#                 [prompt],
+#                 generation_config=generation_config,
+#                 safety_settings=[
+#                     SafetySetting(category=h, threshold=HarmBlockThreshold.BLOCK_NONE)
+#                     for h in harm_categories
+#                 ]
+#             )
+#             break
+#         except Exception as exc:
+#             if "429" in str(exc):
+#                 print("Retry due to rate limit: ", exc)
+#                 time.sleep(backoff)
+#                 backoff = min(backoff * 2, 64)
+#                 continue
+#             if "403" in str(exc):
+#                 print("NO ACCESS TO ENDPOINT", exc)
+#                 raise NotImplementedError("API access denied") from exc
+#             print("Exception: ", exc)
+#             return []
 
-    try:
-        # Keep this to check for errors in indexing.
-        [candidate.text for candidate in response.candidates]
-        if len(response.candidates) == 1:
-            return response.candidates[0].text
-        return [candidate.text for candidate in response.candidates]
-    except Exception as exc:
-        print("Error extracting text from response:", exc)
-        return []
+#     try:
+#         # Keep this to check for errors in indexing.
+#         [candidate.text for candidate in response.candidates]
+#         if len(response.candidates) == 1:
+#             return response.candidates[0].text
+#         return [candidate.text for candidate in response.candidates]
+#     except Exception as exc:
+#         print("Error extracting text from response:", exc)
+#         return []
 
 
 class RAG:
