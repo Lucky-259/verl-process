@@ -3,6 +3,7 @@ set -x
 
 cd /opt/tiger/hqz_debug/cky/verl-process
 
+pip install -e .
 pip install math_verify
 
 export NCCL_DEBUG=WARN
