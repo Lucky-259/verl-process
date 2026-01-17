@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# cd /opt/tiger/hqz_debug/cky/verl-process
-cd /mnt/luoyingfeng/changkaiyan/verl-process
+cd /opt/tiger/hqz_debug/cky/verl-process
+# cd /mnt/luoyingfeng/changkaiyan/verl-process
 
 pip install -e .
 pip install sentence_transformers
