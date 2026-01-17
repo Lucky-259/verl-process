@@ -735,15 +735,24 @@ def main():
     )
 
     args = parser.parse_args()
+    # 【新增逻辑】自动检测 config.json 是否在 huggingface 子目录下
+    hf_model_config_path = args.local_dir
+    # 如果 local_dir 下没有 config.json
+    if not os.path.exists(os.path.join(args.local_dir, "config.json")):
+        # 检查是否存在 huggingface 子目录且里面有 config.json
+        possible_hf_dir = os.path.join(args.local_dir, "huggingface")
+        if os.path.exists(os.path.join(possible_hf_dir, "config.json")):
+            print(f"[Info] Config not found in {args.local_dir}, but found in {possible_hf_dir}. Using subdirectory for config.")
+            hf_model_config_path = possible_hf_dir
 
     common_config_args = {
         "operation": args.operation,
         "backend": args.backend,
         "tie_word_embedding": args.tie_word_embedding,
         "is_value_model": args.is_value_model,
-        "local_dir": args.local_dir,
+        "local_dir": args.local_dir,  # 保持指向 actor/ (读取权重)
         "hf_model_path": args.hf_model_path,
-        "hf_model_config_path": args.local_dir,
+        "hf_model_config_path": hf_model_config_path, # 使用自动检测后的路径 (读取配置)
     }
 
     if args.operation == "merge":

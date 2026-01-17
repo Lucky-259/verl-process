@@ -12,6 +12,9 @@ CHECKPOINT_ROOT="/mnt/hdfs/if_au/saves/cky/checkpoints/${PROJECT_NAME}/${EXPERIM
 OUTPUT_ROOT="/mnt/hdfs/if_au/saves/cky/eval_results/${EXPERIMENT_NAME}"
 
 DATASETS=("aime" "aime25" "amc" "math" "minerva" "olympiad_bench")
+# CHECKPOINT_ROOT="/mnt/luoyingfeng/changkaiyan/ShorterBetter/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
+# OUTPUT_ROOT="/mnt/luoyingfeng/changkaiyan/verl-process/eval/eval_results/${EXPERIMENT_NAME}"
+# DATASETS=("aime" "math")
 
 ALL_PORTS=(8010 8011 8012 8013 8014 8015 8016 8017)
 DEVICES=(0 1 2 3 4 5 6 7)
@@ -24,21 +27,21 @@ echo "Using $NUM_DEVICES GPUs with ports: ${PORTS[*]}"
 
 mkdir -p "$OUTPUT_ROOT"
 
-# ============ experiment 内 CSV（每个 experiment 一份，不覆盖）============
+# ============ CSV Headers ============
 SUMMARY_FILE="$OUTPUT_ROOT/all_checkpoints_summary.csv"
 if [ ! -f "$SUMMARY_FILE" ]; then
   echo "Step,Dataset,Path,Pass@1,Pass@K,AvgLen" > "$SUMMARY_FILE"
 fi
 
-# ============ 全局 CSV（所有 jobs 一份，不覆盖）============
 GLOBAL_OUTPUT_ROOT="/mnt/hdfs/if_au/saves/cky/eval_results"
+# GLOBAL_OUTPUT_ROOT="/mnt/luoyingfeng/changkaiyan/verl-process/eval/eval_results"
 GLOBAL_SUMMARY_FILE="$GLOBAL_OUTPUT_ROOT/all_jobs_summary_8k.csv"
 mkdir -p "$GLOBAL_OUTPUT_ROOT"
 if [ ! -f "$GLOBAL_SUMMARY_FILE" ]; then
   echo "Project,Experiment,Step,Dataset,Path,Pass@1,Pass@K,AvgLen" > "$GLOBAL_SUMMARY_FILE"
 fi
 
-# ============ 工具函数：从 summary.json 写入两个 CSV（summary 存在就写）============
+# ============ 工具函数 ============
 append_csv_if_summary_exists () {
     local STEP_NAME="$1"
     local DATA_NAME="$2"
@@ -54,7 +57,6 @@ append_csv_if_summary_exists () {
     # 读取指标
     read P1 PK AVG_LEN <<< $(python -c "import json; d=json.load(open('$SUMMARY_JSON')); print(f\"{d.get('pass@1','N/A')} {d.get('pass@'+str($REPEAT),'N/A')} {d.get('average_token_len','N/A')}\")" 2>/dev/null || echo "N/A N/A N/A")
 
-    # ---- experiment CSV 去重（避免重复追加）----
     if grep -Fq "$STEP_NAME,$DATA_NAME,$MODEL_PATH," "$SUMMARY_FILE"; then
         echo "[Skip EXP CSV] Already recorded: $STEP_NAME - $DATA_NAME"
     else
@@ -62,7 +64,6 @@ append_csv_if_summary_exists () {
         echo "[EXP CSV] Recorded: $STEP_NAME - $DATA_NAME | P1=$P1 PK=$PK Len=$AVG_LEN"
     fi
 
-    # ---- global CSV 去重（Project+Experiment+Step+Dataset+Path）----
     if grep -Fq "$PROJECT_NAME,$EXPERIMENT_NAME,$STEP_NAME,$DATA_NAME,$MODEL_PATH," "$GLOBAL_SUMMARY_FILE"; then
         echo "[Skip GLOBAL CSV] Already recorded: $PROJECT_NAME/$EXPERIMENT_NAME $STEP_NAME - $DATA_NAME"
     else
@@ -83,17 +84,63 @@ fi
 # ================= 开始 Checkpoint 循环 =================
 for STEP_DIR in $CHECKPOINT_DIRS; do
     STEP_NAME=$(basename "$STEP_DIR")
+    
+    # 定义 FSDP 源目录 (Actor) 和 目标 HF 目录
+    FSDP_DIR="$STEP_DIR/actor"
     MODEL_PATH="$STEP_DIR/actor/huggingface"
-
-    if [ ! -d "$MODEL_PATH" ]; then
-        echo "Warning: Model path not found: $MODEL_PATH. Skipping..."
-        continue
-    fi
 
     echo "========================================================"
     echo "Checkpoint: $STEP_NAME"
-    echo "Model Path: $MODEL_PATH"
+    echo "FSDP Source: $FSDP_DIR"
+    echo "Target Model Path: $MODEL_PATH"
     echo "========================================================"
+
+    # ------------------------------------------------------------------
+    # 【新增逻辑】检查并合并 safetensors
+    # ------------------------------------------------------------------
+    
+    # 1. 检查 FSDP 源目录是否存在
+    if [ ! -d "$FSDP_DIR" ]; then
+        echo "Error: FSDP source directory not found: $FSDP_DIR. Skipping..."
+        continue
+    fi
+
+    # 2. 检查目标目录是否已有 safetensors 文件
+    # find 命令查找 .safetensors 文件，如果数量为0则说明没合并过或者合并失败
+    if [ -d "$MODEL_PATH" ]; then
+        SAFE_COUNT=$(find "$MODEL_PATH" -maxdepth 1 -name "*.safetensors" | wc -l)
+    else
+        SAFE_COUNT=0
+    fi
+
+    if [ "$SAFE_COUNT" -gt 0 ]; then
+        echo "[Check] Safetensors found in $MODEL_PATH. Skipping merge."
+    else
+        echo "[Merge] No safetensors found. Starting merge process..."
+        echo "Running scripts/legacy_model_merger.py..."
+        
+        # 运行合并脚本
+        python scripts/legacy_model_merger.py merge \
+            --backend fsdp \
+            --local_dir "$FSDP_DIR" \
+            --target_dir "$MODEL_PATH"
+
+        # 检查合并脚本的退出状态
+        if [ $? -ne 0 ]; then
+            echo "Error: Model merge failed for $STEP_NAME. Skipping evaluation."
+            continue
+        fi
+        
+        # 二次检查是否真的生成了
+        SAFE_COUNT_AFTER=$(find "$MODEL_PATH" -maxdepth 1 -name "*.safetensors" | wc -l)
+        if [ "$SAFE_COUNT_AFTER" -eq 0 ]; then
+             echo "Error: Merge script ran but no .safetensors found in $MODEL_PATH. Skipping."
+             continue
+        fi
+        echo "[Merge] Successfully merged to $MODEL_PATH"
+    fi
+    # ------------------------------------------------------------------
+
 
     # 1) 先判断该 checkpoint 是否有缺失的 details（决定要不要启动 vLLM）
     NEED_RUN_DATASETS=()
@@ -128,9 +175,6 @@ for STEP_DIR in $CHECKPOINT_DIRS; do
         echo "[Skip vLLM] All datasets already have details for $STEP_NAME."
     fi
 
-    # 3) 无论是否启动 vLLM，都遍历所有 datasets：
-    #    - 如果 details 不存在 -> 跑推理
-    #    - 如果 summary 存在 -> 写入两个 CSV
     for DATA_NAME in "${DATASETS[@]}"; do
         DATA_FILE="deepscaler/data/test/${DATA_NAME}.json"
         CURRENT_OUTPUT_DIR="$OUTPUT_ROOT/$STEP_NAME/$DATA_NAME"
@@ -159,9 +203,12 @@ for STEP_DIR in $CHECKPOINT_DIRS; do
         append_csv_if_summary_exists "$STEP_NAME" "$DATA_NAME" "$MODEL_PATH" "$CURRENT_OUTPUT_DIR"
     done
 
-    # 4) 如果本轮启动过 vLLM，才清理
     if [ "$VLLM_STARTED" -eq 1 ]; then
         echo "Cleaning up vLLM..."
+        killall vllm || true
+        sleep 5
+        killall vllm || true
+        sleep 5
         killall vllm || true
         sleep 5
     fi
