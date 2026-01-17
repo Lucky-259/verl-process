@@ -118,8 +118,6 @@ for STEP_DIR in $CHECKPOINT_DIRS; do
 
             CUDA_VISIBLE_DEVICES=$DEVICE vllm serve "$MODEL_PATH" \
             --max_model_len 8192 \
-            --enforce-eager \
-            --gpu-memory-utilization 0.93 \
             --port "$PORT" > "$LOG_FILE" 2>&1 &
         done
 
