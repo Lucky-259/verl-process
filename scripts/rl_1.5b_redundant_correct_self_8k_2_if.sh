@@ -19,7 +19,7 @@ MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 PROJECT_NAME='Redundancy'
 EXPERIMENT_NAME='DS1.5B_8k_redundancy_correct_self_1_2e-4'
 
-python3 -m verl.trainer.main_ppo \
+python3 -u -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     reward_model.reward_manager=redundancy \
     +reward_model.reward_kwargs.alpha=1 \
@@ -54,7 +54,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.temperature=0.9 \
     actor_rollout_ref.rollout.n=8 \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.9 \
     actor_rollout_ref.rollout.val_kwargs.n=8 \
     trainer.critic_warmup=0 \
@@ -67,4 +67,4 @@ python3 -m verl.trainer.main_ppo \
     trainer.save_freq=100 \
     trainer.test_freq=200 \
     trainer.default_local_dir="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}" \
-    trainer.total_training_steps=1000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}.log
+    trainer.total_training_steps=1000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}.log 2>&1
