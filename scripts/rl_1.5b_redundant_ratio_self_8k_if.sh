@@ -5,10 +5,10 @@ cd /opt/tiger/hqz_debug/cky/verl-process
 
 pip install -e .
 pip install math_verify
+pip install tensorboard
 
 export NCCL_DEBUG=WARN
 export PROJECT_HOME="verl-process"
-export LOG_DIR="/path/to/logs"
 export PYTHONPATH="${PROJECT_HOME}:$PYTHONPATH"
 export VLLM_ATTENTION_BACKEND="XFORMERS"
 export DATASET_DIR="deepscaler/data"
@@ -16,7 +16,7 @@ ROOT_DIR=/mnt/hdfs/if_au/saves/cky
 
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 
-PROJECT_NAME='Redundancy'
+PROJECT_NAME='Redundancy_new'
 EXPERIMENT_NAME='DS1.5B_8k_redundancy_ratio_1_self'
 
 python3 -u -m verl.trainer.main_ppo \
@@ -54,11 +54,11 @@ python3 -u -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.temperature=0.9 \
     actor_rollout_ref.rollout.n=8 \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.9 \
     actor_rollout_ref.rollout.val_kwargs.n=8 \
     trainer.critic_warmup=0 \
-    trainer.logger='["console"]' \
+    trainer.logger='["console", "tensorboard"]' \
     trainer.project_name="${PROJECT_NAME}" \
     trainer.experiment_name="${EXPERIMENT_NAME}" \
     trainer.val_before_train=True \
