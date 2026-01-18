@@ -16,7 +16,7 @@ ROOT_DIR=/mnt/hdfs/if_au/saves/cky
 
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 
-PROJECT_NAME='Redundancy'
+PROJECT_NAME='Redundancy_new'
 EXPERIMENT_NAME='DS1.5B_8k_redundancy_ratio_1_self'
 
 python3 -u -m verl.trainer.main_ppo \
