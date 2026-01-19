@@ -18,7 +18,7 @@ MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 PROJECT_NAME='Redundancy_new'
 EXPERIMENT_NAME='DS1.5B_8k_redundancy_ratio_1_self'
 RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
-LOG_FILE="$ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}_new.log"
+LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}_new.log"
 mkdir -p "$RUN_DIR"
 export TENSORBOARD_DIR=$RUN_DIR
 
