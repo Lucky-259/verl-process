@@ -74,6 +74,12 @@ append_csv_if_summary_exists () {
 
 # ================= 查找 Checkpoints =================
 echo "Looking for checkpoints in $CHECKPOINT_ROOT..."
+if [ ! -d "$CHECKPOINT_ROOT" ]; then
+    echo "Warning: Directory not found: $CHECKPOINT_ROOT"
+    echo "Skipping evaluation for this experiment."
+    exit 0  # 正常退出，不报错，方便批量脚本继续运行
+fi
+
 CHECKPOINT_DIRS=$(find "$CHECKPOINT_ROOT" -maxdepth 1 -type d -name "global_step_*" | sort -V)
 
 if [ -z "$CHECKPOINT_DIRS" ]; then

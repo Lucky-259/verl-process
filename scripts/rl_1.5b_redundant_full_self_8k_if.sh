@@ -13,11 +13,14 @@ export PYTHONPATH="${PROJECT_HOME}:$PYTHONPATH"
 export VLLM_ATTENTION_BACKEND="XFORMERS"
 export DATASET_DIR="deepscaler/data"
 ROOT_DIR=/mnt/hdfs/if_au/saves/cky
-
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 
 PROJECT_NAME='Redundancy_new'
 EXPERIMENT_NAME='DS1.5B_8k_redundancy_full_ground_1_2e-4'
+RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
+LOG_FILE="$ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}_new.log"
+mkdir -p "$RUN_DIR"
+export TENSORBOARD_DIR=$RUN_DIR
 
 python3 -u -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -66,5 +69,5 @@ python3 -u -m verl.trainer.main_ppo \
     trainer.nnodes=1 \
     trainer.save_freq=100 \
     trainer.test_freq=200 \
-    trainer.default_local_dir="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}" \
-    trainer.total_training_steps=1000 "${@:1}" > $ROOT_DIR/checkpoints/${PROJECT_NAME}_${EXPERIMENT_NAME}_new.log 2>&1
+    trainer.default_local_dir="$RUN_DIR" \
+    trainer.total_training_steps=1000 "${@:1}" > "$LOG_FILE" 2>&1
