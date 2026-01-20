@@ -54,8 +54,14 @@ def default_compute_score(
         # To use it, override the `compute_score` function with the following implementation:
     
     elif data_source == "deepscaler" or data_source.startswith("aime"):
-        from . import math_verify
-        res = math_verify.compute_score(solution_str, ground_truth)
+        # from . import math_verify
+        # res = math_verify.compute_score(solution_str, ground_truth)
+        try:
+            from deepscaler.rewards.math_utils.utils import grade_answer_verl
+            res = 1.0 if grade_answer_verl(solution_str, ground_truth) else 0.0
+        except Exception:
+            # Any error in evaluation should not crash training
+            res = 0.0
 
     elif data_source == "math_dapo":
         from . import math_dapo
