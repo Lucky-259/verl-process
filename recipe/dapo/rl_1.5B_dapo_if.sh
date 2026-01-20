@@ -25,6 +25,9 @@ mkdir -p "$RUN_DIR"
 HDFS_LOG_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}"
 SYNC_INTERVAL=3600   # 每 60 秒传一次；你可以改成 30/120
 
+mkdir -p "$(dirname "$LOG_FILE")"
+: > "$LOG_FILE"
+
 hdfs_sync_log_once() {
   # 确保 HDFS 目录存在
   hdfs dfs -mkdir -p "$HDFS_LOG_DIR" >/dev/null 2>&1 || true
