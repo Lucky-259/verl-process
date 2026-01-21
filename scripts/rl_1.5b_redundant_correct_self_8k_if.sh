@@ -5,7 +5,7 @@ cd /opt/tiger/hqz_debug/cky/verl-process
 
 pip install -e .
 pip install math_verify
-pip install tensorboard
+# pip install tensorboard
 
 export NCCL_DEBUG=WARN
 export PROJECT_HOME="verl-process"
@@ -20,7 +20,7 @@ EXPERIMENT_NAME='DS1.5B_8k_redundancy_correct_self_2_1e-3'
 RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
 LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}_new.log"
 mkdir -p "$RUN_DIR"
-export TENSORBOARD_DIR=$RUN_DIR
+# export TENSORBOARD_DIR=$RUN_DIR
 
 python3 -u -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -61,7 +61,7 @@ python3 -u -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.9 \
     actor_rollout_ref.rollout.val_kwargs.n=8 \
     trainer.critic_warmup=0 \
-    trainer.logger='["console", "tensorboard"]' \
+    trainer.logger='["console"]' \
     trainer.project_name="${PROJECT_NAME}" \
     trainer.experiment_name="${EXPERIMENT_NAME}" \
     trainer.val_before_train=True \

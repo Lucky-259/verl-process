@@ -64,7 +64,7 @@ python3 -u -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     reward_model.reward_manager=redundancy \
     +reward_model.reward_kwargs.alpha=1 \
-    +reward_model.reward_kwargs.beta=5e-4 \
+    +reward_model.reward_kwargs.beta=2e-4 \
     +reward_model.reward_kwargs.extraction=self \
     +reward_model.reward_kwargs.way=correct \
     data.train_files=deepscaler/data/train_deepscaler_filtered_plus.parquet \
@@ -105,7 +105,7 @@ python3 -u -m verl.trainer.main_ppo \
     trainer.val_before_train=True \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
-    trainer.save_freq=100 \
-    trainer.test_freq=200 \
+    trainer.save_freq=50 \
+    trainer.test_freq=50 \
     trainer.default_local_dir="$RUN_DIR" \
     trainer.total_training_steps=1000 "${@:1}" > "$LOG_FILE" 2>&1
