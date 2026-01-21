@@ -13,12 +13,12 @@ export PYTHONPATH="${PROJECT_HOME}:$PYTHONPATH"
 export VLLM_ATTENTION_BACKEND="XFORMERS"
 export DATASET_DIR="deepscaler/data"
 ROOT_DIR=/mnt/hdfs/if_au/saves/cky
-MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
+MODEL_PATH="/mnt/hdfs/if_au/models/Qwen3-8B"
 
 PROJECT_NAME='Redundancy'
-EXPERIMENT_NAME='DS1.5B_8k_redundancy_correct_self_1_2e-4'
+EXPERIMENT_NAME='Qwen8B_8k_redundancy_correct_self_1_2e-4'
 RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
-LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}_new.log"
+LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}.log"
 mkdir -p "$RUN_DIR"
 # export TENSORBOARD_DIR=$RUN_DIR
 
@@ -64,7 +64,7 @@ python3 -u -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     reward_model.reward_manager=redundancy \
     +reward_model.reward_kwargs.alpha=1 \
-    +reward_model.reward_kwargs.beta=5e-4 \
+    +reward_model.reward_kwargs.beta=3e-4 \
     +reward_model.reward_kwargs.extraction=self \
     +reward_model.reward_kwargs.way=correct \
     data.train_files=deepscaler/data/train_deepscaler_filtered_plus.parquet \
@@ -81,18 +81,17 @@ python3 -u -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.ppo_mini_batch_size=64 \
     actor_rollout_ref.actor.ppo_epochs=1 \
     actor_rollout_ref.actor.use_dynamic_bsz=True \
-    actor_rollout_ref.actor.ppo_max_token_len_per_gpu=32768 \
+    actor_rollout_ref.actor.ppo_max_token_len_per_gpu=16384 \
     actor_rollout_ref.actor.use_kl_loss=True \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
     actor_rollout_ref.actor.ulysses_sequence_parallel_size=1 \
-    actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.max_num_batched_tokens=32768 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.max_num_batched_tokens=16384 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=2 \
     actor_rollout_ref.rollout.temperature=0.9 \
     actor_rollout_ref.rollout.n=8 \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
@@ -106,6 +105,6 @@ python3 -u -m verl.trainer.main_ppo \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
     trainer.save_freq=100 \
-    trainer.test_freq=200 \
+    trainer.test_freq=100 \
     trainer.default_local_dir="$RUN_DIR" \
     trainer.total_training_steps=1000 "${@:1}" > "$LOG_FILE" 2>&1
