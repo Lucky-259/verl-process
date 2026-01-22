@@ -5,7 +5,7 @@ export VLLM_USE_V1=0
 
 PROJECT_NAME=${1}
 EXPERIMENT_NAME=${2}
-REPEAT=${3:-1}
+REPEAT=${3:-16}
 CONCURRENCY=${4:-150}
 
 CHECKPOINT_ROOT="/mnt/hdfs/if_au/saves/cky/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
@@ -30,15 +30,18 @@ mkdir -p "$OUTPUT_ROOT"
 # ============ CSV Headers ============
 SUMMARY_FILE="$OUTPUT_ROOT/all_checkpoints_summary.csv"
 if [ ! -f "$SUMMARY_FILE" ]; then
-  echo "Step,Dataset,Path,Pass@1,Pass@K,AvgLen" > "$SUMMARY_FILE"
+  echo "Step,Dataset,Path,Pass@1,Pass@K,Avg@K,AvgLen" > "$SUMMARY_FILE"
 fi
 
 GLOBAL_OUTPUT_ROOT="/mnt/hdfs/if_au/saves/cky/eval_results"
 # GLOBAL_OUTPUT_ROOT="/mnt/luoyingfeng/changkaiyan/verl-process/eval/eval_results"
-GLOBAL_SUMMARY_FILE="$GLOBAL_OUTPUT_ROOT/all_jobs_summary_8k.csv"
+
+# 这里换一个新文件名，避免旧 global csv 少一列、且历史结果无 avg@k 导致列数不一致
+GLOBAL_SUMMARY_FILE="$GLOBAL_OUTPUT_ROOT/all_jobs_summary_8k_avgk.csv"
+
 mkdir -p "$GLOBAL_OUTPUT_ROOT"
 if [ ! -f "$GLOBAL_SUMMARY_FILE" ]; then
-  echo "Project,Experiment,Step,Dataset,Path,Pass@1,Pass@K,AvgLen" > "$GLOBAL_SUMMARY_FILE"
+  echo "Project,Experiment,Step,Dataset,Path,Pass@1,Pass@K,Avg@K,AvgLen" > "$GLOBAL_SUMMARY_FILE"
 fi
 
 # ============ 工具函数 ============
@@ -55,19 +58,20 @@ append_csv_if_summary_exists () {
     fi
 
     # 读取指标
-    read P1 PK AVG_LEN <<< $(python -c "import json; d=json.load(open('$SUMMARY_JSON')); print(f\"{d.get('pass@1','N/A')} {d.get('pass@'+str($REPEAT),'N/A')} {d.get('average_token_len','N/A')}\")" 2>/dev/null || echo "N/A N/A N/A")
+    # avg@k 的 key 是 "avg@${REPEAT}"（k 就是 repeat）
+    read P1 PK AVGK AVG_LEN <<< $(python -c "import json; d=json.load(open('$SUMMARY_JSON')); k=str($REPEAT); print(f\"{d.get('pass@1','N/A')} {d.get('pass@'+k,'N/A')} {d.get('avg@'+k,'N/A')} {d.get('average_token_len','N/A')}\")" 2>/dev/null || echo "N/A N/A N/A N/A")
 
     if grep -Fq "$STEP_NAME,$DATA_NAME,$MODEL_PATH," "$SUMMARY_FILE"; then
         echo "[Skip EXP CSV] Already recorded: $STEP_NAME - $DATA_NAME"
     else
-        echo "$STEP_NAME,$DATA_NAME,$MODEL_PATH,$P1,$PK,$AVG_LEN" >> "$SUMMARY_FILE"
-        echo "[EXP CSV] Recorded: $STEP_NAME - $DATA_NAME | P1=$P1 PK=$PK Len=$AVG_LEN"
+        echo "$STEP_NAME,$DATA_NAME,$MODEL_PATH,$P1,$PK,$AVGK,$AVG_LEN" >> "$SUMMARY_FILE"
+        echo "[EXP CSV] Recorded: $STEP_NAME - $DATA_NAME | P1=$P1 PK=$PK AVGK=$AVGK Len=$AVG_LEN"
     fi
 
     if grep -Fq "$PROJECT_NAME,$EXPERIMENT_NAME,$STEP_NAME,$DATA_NAME,$MODEL_PATH," "$GLOBAL_SUMMARY_FILE"; then
         echo "[Skip GLOBAL CSV] Already recorded: $PROJECT_NAME/$EXPERIMENT_NAME $STEP_NAME - $DATA_NAME"
     else
-        echo "$PROJECT_NAME,$EXPERIMENT_NAME,$STEP_NAME,$DATA_NAME,$MODEL_PATH,$P1,$PK,$AVG_LEN" >> "$GLOBAL_SUMMARY_FILE"
+        echo "$PROJECT_NAME,$EXPERIMENT_NAME,$STEP_NAME,$DATA_NAME,$MODEL_PATH,$P1,$PK,$AVGK,$AVG_LEN" >> "$GLOBAL_SUMMARY_FILE"
         echo "[GLOBAL CSV] Recorded: $PROJECT_NAME/$EXPERIMENT_NAME $STEP_NAME - $DATA_NAME"
     fi
 }

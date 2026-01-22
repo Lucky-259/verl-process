@@ -271,6 +271,7 @@ def main(seed):
     total_responses_count = len(original_data) * args.repeat
     correct_count = 0
     pass16_correct = 0
+    per_rep_correct_counts = [0] * args.repeat
 
     for q_idx, result in detailed_results.items():
         correct_count += sum(result["correct_flags"])
@@ -284,15 +285,29 @@ def main(seed):
         if question_correct:
             pass16_correct += 1
 
-    pass_at_1 = correct_count / total_responses_count
+        # === 统计每个 rep 的 pass@1（全数据集一次跑完的 pass@1）===
+        for rep in range(args.repeat):
+            if result["correct_flags"][rep]:
+                per_rep_correct_counts[rep] += 1
+
+    num_questions = len(original_data)
+    per_rep_pass_at_1 = [c / num_questions if num_questions > 0 else 0.0 for c in per_rep_correct_counts]
+
+    # 这里的 pass@1 定义为：第 0 次（rep=0）完整跑完数据集得到的 pass@1
+    pass_at_1 = per_rep_pass_at_1[0] if args.repeat > 0 else 0.0
+
     pass_at_16 = pass16_correct / len(original_data)
     average_token_len = total_token_count / total_responses_count if total_responses_count > 0 else 0
+
+    # avg@k（k=args.repeat）
+    avg_at_k = sum(per_rep_pass_at_1) / args.repeat if args.repeat > 0 else 0.0
 
     summary_results = {
         "file": args.file,
         "model": args.model,
         "pass@1": pass_at_1,
         f"pass@{args.repeat}": pass_at_16,
+        f"avg@{args.repeat}": avg_at_k,
         "average_token_len": average_token_len,
         "total_tokens": total_token_count,
         "total_responses": total_responses_count,
@@ -312,6 +327,7 @@ def main(seed):
 
     print("\n######### Deepscaler 统计结果:")
     print(f"pass@1 = {pass_at_1:.4f}, pass@{args.repeat} = {pass_at_16:.4f}")
+    print(f"avg@{args.repeat} = {avg_at_k:.4f}")
     print(f"Avg Tokens = {average_token_len:.2f}, Total Tokens = {total_token_count}")
     print(f"统计信息已保存至 {args.output_dir}/results_summary.json")
 

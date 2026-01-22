@@ -12,14 +12,17 @@ BASE_SCRIPT="eval/vllm_all_8k.sh"   # 改成你的实际脚本路径
 
 # 你可以在这里列出多组：PROJECT_NAME EXPERIMENT_NAME [REPEAT] [CONCURRENCY]
 JOBS=(
-  "Redundancy DS1.5B_8k_redundancy_correct_self_1_1e-4 1 200"
-  "Redundancy DS1.5B_8k_redundancy_correct_self_1_2e-4 1 200"
-  "Redundancy DS1.5B_8k_redundancy_ratio_1_self 1 200"
-  "Redundancy DS1.5B_8k_redundancy_full_ground_1_2e-4 1 200"
-  "ShorterBetter DS1.5B_8k_shorter_1e-3 1 200"
-  "ShorterBetter DS1.5B_16k_shorter_1e-4 1 200"
-  "GRPO_Process DS1.5B_8k_baseline 1 200"
+  "Redundancy_DAPO DS1.5B_8k_redundancy_self_correct_1_5e-4_0.5_DAPO 16 200"
 )
+
+# # Baseline
+# BASE_SCRIPT="eval/vllm_baseline_8k.sh"   # 改成你的实际脚本路径
+
+# # 你可以在这里列出多组：PROJECT_NAME EXPERIMENT_NAME [REPEAT] [CONCURRENCY]
+# JOBS=(
+#   "DeepSeek-R1-Distill-Qwen-1.5B 16 200"
+#   "DeepSeek-R1-Distill-Qwen-7B 16 200"
+# )
 
 for job in "${JOBS[@]}"; do
   echo "========================================"
