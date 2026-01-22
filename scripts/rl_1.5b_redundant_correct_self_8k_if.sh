@@ -16,7 +16,7 @@ ROOT_DIR=/mnt/hdfs/if_au/saves/cky
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 
 PROJECT_NAME='Redundancy_new'
-EXPERIMENT_NAME='DS1.5B_8k_redundancy_correct_self_2_1e-3'
+EXPERIMENT_NAME='DS1.5B_8k_redundancy_correct_self_1_5e-4'
 RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
 LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}_new.log"
 mkdir -p "$RUN_DIR"
@@ -25,8 +25,8 @@ mkdir -p "$RUN_DIR"
 python3 -u -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     reward_model.reward_manager=redundancy \
-    +reward_model.reward_kwargs.alpha=2 \
-    +reward_model.reward_kwargs.beta=1e-3 \
+    +reward_model.reward_kwargs.alpha=1 \
+    +reward_model.reward_kwargs.beta=5e-4 \
     +reward_model.reward_kwargs.extraction=self \
     +reward_model.reward_kwargs.way=correct \
     data.train_files=deepscaler/data/train_deepscaler_filtered_plus.parquet \
@@ -57,7 +57,7 @@ python3 -u -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.temperature=0.9 \
     actor_rollout_ref.rollout.n=8 \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.9 \
     actor_rollout_ref.rollout.val_kwargs.n=8 \
     trainer.critic_warmup=0 \
