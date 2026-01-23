@@ -27,7 +27,7 @@ def request_model(client, prompt, seed, model, tokenizer=None):
     封装一次推理请求，内置重试逻辑。
     如果遇到连接错误或限流，会进行指数退避重试。
     """
-    max_retries = 20
+    max_retries = 5
     base_delay = 2.0
     
     for attempt in range(max_retries):
@@ -43,7 +43,7 @@ def request_model(client, prompt, seed, model, tokenizer=None):
                 },
                 temperature=0.6,
                 top_p=0.95,
-                timeout=300, # 单次请求超时时间
+                timeout=100000000, # 单次请求超时时间
             )
             
             # 请求成功，处理结果
