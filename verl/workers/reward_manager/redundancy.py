@@ -348,14 +348,16 @@ class RedundancyRewardManager:
             
             # Calculate Verification Length
             think, answer = split_think_answer(response_str)
+            has_think = think is not None
             boxed = extract_final_boxed_answer(answer) if think else None
             
             if self.extraction == "self":
                 boxed_answer = boxed
             else:
+                boxed_answer = boxed if has_think else ground_truth
                 think = think if think else response_str
-                boxed_answer = ground_truth
             
+            first = None
             verification_length, think_length = 0, 0
             if think and boxed_answer and not (self.way != "full" and reward == 0):
                 think_ids = self.tokenizer.encode(think, add_special_tokens=False)
@@ -374,25 +376,29 @@ class RedundancyRewardManager:
             
             # Compute Rollout Reward
             split =  extra_info.get("split", "train")
+            no_think_reward = 0
             if split == "train":
                 if self.way == "ratio_1": # 方式三用减去比率惩罚，正确和错误都惩罚
                     reward = self.alpha * reward - self.beta * verification_ratio * reward
                 elif self.way == "ratio_2": # 方式三用乘以比率惩罚，正确和错误都惩罚
                     reward = self.alpha * reward * (1 - self.beta * verification_ratio)
                 elif self.way == "full": # 方式四用长度惩罚，正确的和错误的都惩罚
-                    reward = self.alpha * reward - self.beta * verification_length
+                    no_think_reward = (0.5 if verification_length else -0.5) if not has_think else 0
+                    reward = self.alpha * (reward + no_think_reward) - self.beta * verification_length
                 else: # 方式一和方式二用长度惩罚，只惩罚正确的
                     reward = self.alpha * reward - self.beta * verification_length * reward
             
             metrics.append({
                 "split": split,
-                "boxed_answer": boxed_answer if boxed_answer else "",
-                "ground_truth": ground_truth,
                 "outcome": score["score"] if isinstance(score, dict) else score,
+                "ground_truth": ground_truth,
+                "boxed_answer": boxed_answer if boxed_answer else "",
                 "v_l": verification_length,
                 "v_p": verification_ratio,
                 "reward": reward,
-                # "response": response_str,
+                "no_think_reward": no_think_reward,
+                #"first_sent": first["sent"] if first else "",
+                #"response": response_str,
             })
 
             reward_tensor[i, valid_response_length - 1] = reward

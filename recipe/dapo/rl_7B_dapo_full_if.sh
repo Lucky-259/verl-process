@@ -13,9 +13,9 @@ export PROJECT_HOME="verl-process"
 export VLLM_ATTENTION_BACKEND=XFORMERS
 export DATASET_DIR="deepscaler/data"
 ROOT_DIR=/mnt/hdfs/if_au/saves/cky
-MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
+MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-7B"
 PROJECT_NAME='Redundancy_DAPO'
-EXPERIMENT_NAME='DS1.5B_8k_redundancy_self_correct_1_5e-4_0.5_DAPO'
+EXPERIMENT_NAME='DS7B_8k_redundancy_ground_full_1_2e-4_1_DAPO'
 RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
 LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}.log"
 mkdir -p "$RUN_DIR"
@@ -62,14 +62,14 @@ trap cleanup EXIT INT TERM
 train_prompt_bsz=128
 gen_prompt_bsz=$((train_prompt_bsz * 3))
 n_resp_per_prompt=8
-penalty_factor=0.5
+penalty_factor=1.0
 
 python3 -u -m recipe.dapo.main_dapo \
     reward_model.reward_manager=dapo_redundancy \
     +reward_model.reward_kwargs.alpha=1 \
-    +reward_model.reward_kwargs.beta=5e-4 \
-    +reward_model.reward_kwargs.extraction=self \
-    +reward_model.reward_kwargs.way=correct \
+    +reward_model.reward_kwargs.beta=2e-4 \
+    +reward_model.reward_kwargs.extraction=ground \
+    +reward_model.reward_kwargs.way=full \
     data.train_files="deepscaler/data/train_deepscaler_filtered_plus.parquet" \
     data.val_files="deepscaler/data/aime.parquet" \
     data.prompt_key=prompt \
@@ -94,9 +94,9 @@ python3 -u -m recipe.dapo.main_dapo \
     actor_rollout_ref.actor.use_dynamic_bsz=True \
     actor_rollout_ref.ref.log_prob_use_dynamic_bsz=True \
     actor_rollout_ref.rollout.log_prob_use_dynamic_bsz=True \
-    actor_rollout_ref.actor.ppo_max_token_len_per_gpu=32768 \
-    actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=32768 \
-    actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=32768 \
+    actor_rollout_ref.actor.ppo_max_token_len_per_gpu=16384 \
+    actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=16384 \
+    actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=16384 \
     actor_rollout_ref.model.path=$MODEL_PATH \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.optim.lr=1e-6 \
@@ -112,10 +112,10 @@ python3 -u -m recipe.dapo.main_dapo \
     actor_rollout_ref.actor.ulysses_sequence_parallel_size=1 \
     actor_rollout_ref.ref.fsdp_config.param_offload=False \
     actor_rollout_ref.ref.ulysses_sequence_parallel_size=1 \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=2 \
     actor_rollout_ref.rollout.enable_chunked_prefill=True \
-    actor_rollout_ref.rollout.max_num_batched_tokens=32768 \
+    actor_rollout_ref.rollout.max_num_batched_tokens=16384 \
     actor_rollout_ref.rollout.temperature=0.9 \
     actor_rollout_ref.rollout.top_p=1.0 \
     actor_rollout_ref.rollout.top_k=-1 \
