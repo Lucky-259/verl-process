@@ -359,7 +359,7 @@ class RedundancyRewardManager:
             
             first = None
             verification_length, think_length = 0, 0
-            if think and boxed_answer and not (self.way != "full" and reward == 0):
+            if think and boxed_answer:
                 think_ids = self.tokenizer.encode(think, add_special_tokens=False)
                 think_length = len(think_ids)
                 answer_in_prompt = prompt_contains_answer(prompt_str, boxed_answer)
