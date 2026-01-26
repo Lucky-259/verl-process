@@ -386,7 +386,7 @@ class RedundancyRewardManager:
                     no_think_reward = (0.5 if verification_length else -0.5) if not has_think else 0
                     reward = self.alpha * (reward + no_think_reward) - self.beta * verification_length
                 else: # 方式一和方式二用长度惩罚，只惩罚正确的
-                    reward = self.alpha * reward - self.beta * verification_length * reward
+                    reward = self.alpha * reward - self.beta * verification_length + 1
             
             metrics.append({
                 "split": split,

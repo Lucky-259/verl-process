@@ -428,7 +428,7 @@ class DAPORedundancyRewardManager:
                     redundancy_reward = - self.beta * verification_length
                     reward = self.alpha * (reward + no_think_reward) + redundancy_reward
                 else: # 方式一和方式二用长度惩罚,只惩罚正确的
-                    redundancy_reward = - self.beta * verification_length * reward
+                    redundancy_reward = - self.beta * verification_length + 1
                     reward = self.alpha * reward + redundancy_reward
 
             # overlong buffer (guardrail)
