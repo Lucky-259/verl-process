@@ -15,7 +15,7 @@ export DATASET_DIR="deepscaler/data"
 ROOT_DIR=/mnt/hdfs/if_au/saves/cky
 MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 PROJECT_NAME='Redundancy_DAPO'
-EXPERIMENT_NAME='DS1.5B_8k_redundancy_self_correct_1_5e-4_1_DAPO'
+EXPERIMENT_NAME='DS1.5B_8k_redundancy_self_correct_1_5e-4_DAPO'
 RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
 LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}.log"
 mkdir -p "$RUN_DIR"
@@ -67,7 +67,7 @@ penalty_factor=1.0
 python3 -u -m recipe.dapo.main_dapo \
     reward_model.reward_manager=dapo_redundancy \
     +reward_model.reward_kwargs.alpha=1 \
-    +reward_model.reward_kwargs.beta=5e-4 \
+    +reward_model.reward_kwargs.beta=2e-4 \
     +reward_model.reward_kwargs.extraction=self \
     +reward_model.reward_kwargs.way=correct \
     data.train_files="deepscaler/data/train_deepscaler_filtered_plus.parquet" \
