@@ -60,7 +60,7 @@ trap cleanup EXIT INT TERM
 # ===== Periodically upload local log to HDFS =====
 
 train_prompt_bsz=128
-gen_prompt_bsz=$((train_prompt_bsz * 3))
+gen_prompt_bsz=$((train_prompt_bsz * 2))
 n_resp_per_prompt=8
 penalty_factor=1
 
@@ -82,6 +82,7 @@ python3 -u -m recipe.dapo.main_dapo \
     algorithm.adv_estimator=grpo \
     algorithm.use_kl_in_reward=False \
     algorithm.kl_ctrl.kl_coef=0.0 \
+    actor_rollout_ref.actor.ppo_mini_batch_size=64 \
     actor_rollout_ref.actor.use_kl_loss=False \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.clip_ratio_low=0.2 \
@@ -112,7 +113,7 @@ python3 -u -m recipe.dapo.main_dapo \
     actor_rollout_ref.actor.ulysses_sequence_parallel_size=1 \
     actor_rollout_ref.ref.fsdp_config.param_offload=False \
     actor_rollout_ref.ref.ulysses_sequence_parallel_size=1 \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.enable_chunked_prefill=True \
     actor_rollout_ref.rollout.max_num_batched_tokens=32768 \
