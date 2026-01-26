@@ -446,7 +446,6 @@ class DAPORedundancyRewardManager:
 
             metrics.append({
                 "split": split,
-                "has_think": has_think,
                 "outcome": score["score"] if isinstance(score, dict) else score,
                 "ground_truth": ground_truth,
                 "boxed_answer": boxed_answer if boxed_answer else "",
@@ -456,8 +455,8 @@ class DAPORedundancyRewardManager:
                 "overlong_reward": overlong_reward,
                 "no_think_reward": no_think_reward,
                 "reward": reward,
-                "first_sent": first["sent"] if first else "",
-                "response": response_str,
+                #"first_sent": first["sent"] if first else "",
+                #"response": response_str,
             })
 
             reward_tensor[i, valid_response_length - 1] = reward
