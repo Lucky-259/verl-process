@@ -4,6 +4,7 @@ set -e
 cd /opt/tiger/hqz_debug/cky/verl-process
 # cd /mnt/luoyingfeng/changkaiyan/verl-process
 
+pip install transformers==4.57.3
 pip install -e .
 pip install sentence_transformers
 
