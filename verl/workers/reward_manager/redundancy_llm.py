@@ -13,12 +13,13 @@
 # limitations under the License.
 
 import re
+from openai import OpenAI
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 from math_verify import parse, verify, ExprExtractionConfig, LatexExtractionConfig
 import sys
-# sys.path.append('/mnt/luoyingfeng/changkaiyan/verl-process')
-sys.path.append('/opt/tiger/hqz_debug/cky/verl-process')
+sys.path.append('/mnt/luoyingfeng/changkaiyan/verl-process')
+# sys.path.append('/opt/tiger/hqz_debug/cky/verl-process')
 from deepscaler.rewards.math_utils.utils import grade_answer_verl
 
 import torch
@@ -29,6 +30,37 @@ from verl.workers.reward_manager import register
 
 THINK_END_TAG = "</think>"
 _SENT_SPLIT = re.compile(r"(?<=[。！？!?\.])\s+|\n+")
+
+# vLLM API 配置
+VLLM_API_KEY = "EMPTY"
+VLLM_API_BASE = "http://localhost:8080/v1"  # 修改为你的 vLLM 服务地址
+
+# API 调用配置
+MAX_RETRIES = 5
+BASE_DELAY = 2
+MAX_WORKERS = 8
+TIMEOUT = 5000
+
+EXTRACTION_PROMPT = """\
+You are a reasoning trace analyst. Your role is to identify the first sentence where the model gets the answer of a problem. The goal is to identify the redundant overthinking process after the model has actually solved the problem.
+
+You will be given a reasoning trace, which ends with the `</think>`tag; you will also be given the final answer. You must: 
+
+1. Identify only the **first** sentence where the model gets the final answer.
+2. The sentence you return should be **exactly the same** as the one in the original reasoning trace.
+3. If the sentence containing the final answer is not found, please return **NULL**.
+
+Return only the sentence you identify, no extra commentary or explanation.
+
+---
+
+Final Answer:
+{final_answer}
+
+Reasoning trace:
+{thinking}
+"""
+
 TIGHT_CONCLUSION_CUES = [
     "answer", "therefore", "final", "conclude", "result",
     "equals", "solution", 
@@ -79,13 +111,6 @@ def extract_final_boxed_answer(answer_text: str) -> Optional[str]:
     boxed = find_boxed_spans_bracematch(answer_text)
     return boxed[-1].strip() if boxed else None
 
-def prompt_contains_answer(prompt: str, boxed_answer: str) -> bool:
-    """Mark samples where the final answer already appears in the prompt."""
-    if not prompt or not boxed_answer:
-        return False
-    pat = build_answer_regex(boxed_answer)
-    return pat.search(prompt) is not None
-
 def count_tokens_from_char(tokenizer, text: str, start_char: Optional[int]) -> Optional[int]:
     """Token count for text[start_char:] using a HF tokenizer."""
     if start_char is None:
@@ -123,110 +148,77 @@ def split_sentences_with_spans(text: str) -> List[Dict[str, Any]]:
 
     return spans
 
-def build_answer_regex(boxed_answer: str) -> re.Pattern:
-    """
-    Build a regex that matches the answer as an "independent" occurrence to avoid
-    cases like answer='9' matching '196'.
+def call_vllm(client, prompt, temperature):
+    
+    messages = [
+        {"role": "user", "content": prompt},
+    ]
+    
+    for attempt in range(MAX_RETRIES):
+        try:
+            # 获取模型列表
+            models = client.models.list()
+            model = models.data[0].id
+            
+            # 调用 Chat Completion API
+            # 设置 stop="</final_verification>" 和 include_stop_str_in_output=True
+            chat_completion = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=150,
+                temperature=temperature,
+                extra_body={
+                    "chat_template_kwargs": {"enable_thinking": False}
+                }
+            )
+            
+            # 提取响应文本
+            verification_response = chat_completion.choices[0].message.content
+            
+            return verification_response
+            
+        except Exception as e:
+            if attempt < MAX_RETRIES - 1:
+                print(f"VLLM API call failed (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
+                delay = BASE_DELAY * (2 ** attempt)
+                sleep(delay)
+            else:
+                print(f"VLLM API call failed after {MAX_RETRIES} attempts: {e}")
+                return None
+    
+    return None
 
-    Rules:
-    - Pure integer: match not preceded/followed by a digit.
-    - Pure decimal: match not preceded/followed by digit or dot.
-    - Otherwise: fallback to literal substring (escaped).
-    """
-    ans = boxed_answer.strip().lower()
-
-    if re.fullmatch(r"[+-]?\d+", ans): # 是整数
-        if ans.isdigit() and len(ans) == 1: # 是0-9的整数，前面必须是空格，后面必须无数字
-            return re.compile(rf"(?<=\s){re.escape(ans)}(?!\d)")
-        return re.compile(rf"(?<!\d){re.escape(ans)}(?!\d)") # 是大于9的整数，前后必须无数字
-
-    if re.fullmatch(r"[+-]?\d+\.\d+", ans): # 是小数
-        return re.compile(rf"(?<![\d.]){re.escape(ans)}(?![\d.])")
-
-    return re.compile(re.escape(ans))
-
-def find_first_conclusion_mention_1(
-        think_text: str,
-        boxed_answer: str,
-    ) -> Dict[str, Any]:
-        """
-        Find the first sentence that matches the answer (regex) and looks conclusion-like.
-        Returns: found, reason, first_idx/score, first_char_start, prev/sent/next, all_matches (idx, score).
-        """
-        sents = split_sentences_with_spans(think_text)
-        if not boxed_answer.strip():
-            return {
-                "found": False,
-                "reason": "EMPTY_BOXED_ANSWER",
-                "first_idx": None,
-                "first_score": None,
-                "first_char_start": None,
-                "prev": "",
-                "sent": "",
-                "next": "",
-                "all_matches": []
-            }
-
-        ans_pat = build_answer_regex(boxed_answer)
-
-        first_i = None
-        for i, obj in enumerate(sents):
-            sent = obj["text"].lower()
-            if ans_pat.search(sent) is not None:
-                has_conclusion = any(cue in sent for cue in TIGHT_CONCLUSION_CUES) or any(cue in sent for cue in LOOSE_CONCLUSION_CUES) or  "\\boxed" in sent
-                has_verification = any(cue in (sents[i+1]["text"].lower() if i+1 < len(sents) else "") for cue in VERIFICATION_CUES)
-                if has_conclusion or has_verification:
-                    first_i = i
-                    break
-        if not first_i:
-            return {
-                "found": False,
-                "reason": "ANSWER_NOT_FOUND_IN_THINK",
-                "first_idx": None,
-                "first_score": None,
-                "first_char_start": None,
-                "prev": "",
-                "sent": "",
-                "next": "",
-                "all_matches": []
-            }
-
-        prev_sent = sents[first_i - 1]["text"] if first_i - 1 >= 0 else ""
-        next_sent = sents[first_i + 1]["text"] if first_i + 1 < len(sents) else ""
-
-        return {
-            "found": True,
-            "reason": "",
-            "first_idx": first_i,
-            "first_score": None,
-            "first_char_start": sents[first_i]["end"],
-            "prev": prev_sent,
-            "sent": sents[first_i]["text"],
-            "next": next_sent,
-            "all_matches": []
-        }
-
-def find_first_conclusion_mention_2(
+def find_first_conclusion_mention(
     think_text: str,
     boxed_answer: str,
+    client: OpenAI
 ) -> Dict[str, Any]:
     """
     Find the first sentence that matches the answer (regex) and looks conclusion-like.
     Returns: found, reason, first_idx/score, first_char_start, prev/sent/next, all_matches (idx, score).
     """
-    sents = split_sentences_with_spans(think_text)
     if not boxed_answer.strip():
         return {
             "found": False,
             "reason": "EMPTY_BOXED_ANSWER",
-            "first_idx": None,
-            "first_score": None,
             "first_char_start": None,
-            "prev": "",
-            "sent": "",
-            "next": "",
-            "all_matches": []
+            "sent": ""
         }
+    
+    prompt = EXTRACTION_PROMPT.format(thinking=think_text + "</think>", final_answer=boxed_answer)
+    verification_sentence = call_vllm(client, prompt, temperature=0.6)
+    pattern = re.compile(f"({re.escape(verification_sentence)})", re.DOTALL)
+    match = pattern.search(think_text)
+    
+    if match:
+        return {
+            "found": True,
+            "reason": "llm",
+            "first_char_start": match.end(),
+            "sent": verification_sentence
+        }
+    
+    sents = split_sentences_with_spans(think_text)
 
     first_i = None
     for i, obj in enumerate(sents):
@@ -242,32 +234,21 @@ def find_first_conclusion_mention_2(
         return {
             "found": False,
             "reason": "ANSWER_NOT_FOUND_IN_THINK",
-            "first_idx": None,
-            "first_score": None,
             "first_char_start": None,
-            "prev": "",
-            "sent": "",
-            "next": "",
-            "all_matches": []
+            "sent": ""
         }
-
     prev_sent = sents[first_i - 1]["text"] if first_i - 1 >= 0 else ""
     next_sent = sents[first_i + 1]["text"] if first_i + 1 < len(sents) else ""
 
     return {
         "found": True,
-        "reason": "",
-        "first_idx": first_i,
-        "first_score": None,
+        "reason": "rule",
         "first_char_start": sents[first_i]["end"],
-        "prev": prev_sent,
-        "sent": sents[first_i]["text"],
-        "next": next_sent,
-        "all_matches": []
+        "sent": sents[first_i]["text"]
     }
 
-@register("redundancy")
-class RedundancyRewardManager:
+@register("redundancy_llm")
+class RedundancyLlmRewardManager:
     """The reward manager."""
 
     def __init__(self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", alpha=1, beta=0.0001, extraction="self", way="correct") -> None:
@@ -305,6 +286,13 @@ class RedundancyRewardManager:
         reward_extra_info = defaultdict(list)
 
         already_print_data_sources = {}
+
+        # 创建 OpenAI 客户端
+        client = OpenAI(
+            api_key=VLLM_API_KEY,
+            base_url=VLLM_API_BASE,
+            timeout=TIMEOUT
+        )
 
         metrics = []
         for i in range(len(data)):
@@ -354,7 +342,7 @@ class RedundancyRewardManager:
             if self.extraction == "self":
                 boxed_answer = boxed
             else:
-                boxed_answer = boxed if has_think else ground_truth
+                boxed_answer = boxed if think else ground_truth
                 think = think if think else response_str
             
             first = None
@@ -362,24 +350,19 @@ class RedundancyRewardManager:
             if think and boxed_answer and not (self.way != "full" and reward == 0):
                 think_ids = self.tokenizer.encode(think, add_special_tokens=False)
                 think_length = len(think_ids)
-                answer_in_prompt = prompt_contains_answer(prompt_str, boxed_answer)
-                if not answer_in_prompt:
-                    if self.way == "base": # 方式一不用math_verify，只用正则找
-                        first = find_first_conclusion_mention_1(think, boxed_answer)
-                    else: # 方式二、三、四都用math_verify
-                        first = find_first_conclusion_mention_2(think, boxed_answer)
-                    if first["found"]:
-                        first_char_start = first["first_char_start"]
-                        verification_length = count_tokens_from_char(self.tokenizer, think, first_char_start)
+                first = find_first_conclusion_mention(think, boxed_answer, client)
+                if first["found"]:
+                    first_char_start = first["first_char_start"]
+                    verification_length = count_tokens_from_char(self.tokenizer, think, first_char_start)
             
             verification_ratio = verification_length / think_length if think_length > 0 else 0
             
             # Compute Rollout Reward
-            split =  extra_info.get("split", "train")
+            split = extra_info.get("split", "train")
             no_think_reward = 0
             if split == "train":
                 if self.way == "ratio_1": # 方式三用减去比率惩罚，正确和错误都惩罚
-                    reward = self.alpha * reward - self.beta * verification_ratio * reward
+                    reward = self.alpha * reward - self.beta * verification_ratio
                 elif self.way == "ratio_2": # 方式三用乘以比率惩罚，正确和错误都惩罚
                     reward = self.alpha * reward * (1 - self.beta * verification_ratio)
                 elif self.way == "full": # 方式四用长度惩罚，正确的和错误的都惩罚
@@ -392,13 +375,13 @@ class RedundancyRewardManager:
                 "split": split,
                 "outcome": score["score"] if isinstance(score, dict) else score,
                 "ground_truth": ground_truth,
-                "boxed_answer": boxed_answer if boxed_answer else "",
                 "v_l": verification_length,
                 "v_p": verification_ratio,
                 "reward": reward,
                 "no_think_reward": no_think_reward,
-                #"first_sent": first["sent"] if first else "",
-                #"response": response_str,
+                "first_sent": first["sent"] if first else "",
+                "use_llm": first["reason"] if first else "",
+                "response": response_str,
             })
 
             reward_tensor[i, valid_response_length - 1] = reward
