@@ -768,7 +768,7 @@ def main():
     ap.add_argument("--min_score", type=int, default=4, help="Min conclusion score threshold (default 4)")
     ap.add_argument(
         "--tokenizer_path",
-        default="/mnt/nvme1/luoyingfeng/lucky/model_card/DeepSeek-R1-Distill-Qwen-1.5B",
+        default="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B",
         help="Tokenizer path for token counting",
     )
     ap.add_argument(
