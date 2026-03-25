@@ -397,7 +397,7 @@ class DAPORedundancyRewardManager:
             
             first = None
             verification_length, think_length = 0, 0
-            if think and boxed_answer:
+            if think and boxed_answer and not (self.way != "full" and reward == 0):
                 think_ids = self.tokenizer.encode(think, add_special_tokens=False)
                 think_length = len(think_ids)
                 answer_in_prompt = prompt_contains_answer(prompt_str, boxed_answer)
@@ -428,7 +428,7 @@ class DAPORedundancyRewardManager:
                     redundancy_reward = - self.beta * verification_length
                     reward = self.alpha * (reward + no_think_reward) + redundancy_reward
                 else: # 方式一和方式二用长度惩罚,只惩罚正确的
-                    redundancy_reward = - self.beta * verification_length + 1
+                    redundancy_reward = - self.beta * verification_length
                     reward = self.alpha * reward + redundancy_reward
 
             # overlong buffer (guardrail)
