@@ -96,5 +96,4 @@ python3 -u -m recipe.dapo.main_dapo \
     trainer.test_freq=50 \
     trainer.save_freq=50 \
     trainer.default_local_dir="$RUN_DIR" \
-    trainer.total_training_steps=500 \
-    > "$LOG_FILE" 2>&1
+    trainer.total_training_steps=500 
