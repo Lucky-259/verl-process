@@ -17,47 +17,7 @@ MODEL_PATH="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B"
 PROJECT_NAME='Redundancy_DAPO'
 EXPERIMENT_NAME='DS1.5B_8k_DAPO_base'
 RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
-LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}.log"
-mkdir -p "$RUN_DIR"
-# export TENSORBOARD_DIR=$RUN_DIR
-
-# ===== Periodically upload local log to HDFS =====
-HDFS_LOG_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}"
-SYNC_INTERVAL=3600   # 每 60 秒传一次；你可以改成 30/120
-
-mkdir -p "$(dirname "$LOG_FILE")"
-: > "$LOG_FILE"
-
-hdfs_sync_log_once() {
-  # 确保 HDFS 目录存在
-  hdfs dfs -mkdir -p "$HDFS_LOG_DIR" >/dev/null 2>&1 || true
-
-  # 如果本地 log 还没生成，跳过
-  [[ -f "$LOG_FILE" ]] || return 0
-
-  # 覆盖上传（快照式），最简单可靠
-  hdfs dfs -put -f "$LOG_FILE" "$HDFS_LOG_DIR/" >/dev/null 2>&1 || true
-}
-
-hdfs_sync_log_loop() {
-  while true; do
-    hdfs_sync_log_once
-    sleep "$SYNC_INTERVAL"
-  done
-}
-
-# 后台启动同步
-hdfs_sync_log_loop &
-SYNC_PID=$!
-
-# 脚本退出/中断时最后同步一次
-cleanup() {
-  set +e
-  kill "$SYNC_PID" >/dev/null 2>&1 || true
-  hdfs_sync_log_once
-}
-trap cleanup EXIT INT TERM
-# ===== Periodically upload local log to HDFS =====
+# LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}.log"
 
 train_prompt_bsz=128
 gen_prompt_bsz=$((train_prompt_bsz * 3))
