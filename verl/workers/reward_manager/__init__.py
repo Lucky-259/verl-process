@@ -21,6 +21,8 @@ from .process import ProcessRewardManager
 from .shorter import ShorterRewardManager
 from .redundancy import RedundancyRewardManager
 from .redundancy_dapo import DAPORedundancyRewardManager
+#from .redundancy_llm import RedundancyLlmRewardManager
+from .l1_dapo import L1DAPORewardManager
 
 # Note(haibin.lin): no need to include all reward managers here in case of complicated dependencies
 __all__ = [
@@ -32,6 +34,8 @@ __all__ = [
     "ShorterRewardManager",
     "RedundancyRewardManager",
     "DAPORedundancyRewardManager",
+    #"RedundancyLlmRewardManager",
+    "L1DAPORewardManager",
     "register",
     "get_reward_manager_cls",
 ]
