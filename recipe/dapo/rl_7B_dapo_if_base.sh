@@ -5,6 +5,7 @@ cd /opt/tiger/hqz_debug/cky/verl-process
 
 pip install -e .
 pip install math_verify
+pip install -r requirements_process.txt
 # pip install tensorboard
 
 export NCCL_DEBUG=WARN
