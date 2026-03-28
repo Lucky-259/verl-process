@@ -11,10 +11,12 @@ CONCURRENCY=${4:-150}
 CHECKPOINT_ROOT="/mnt/hdfs/if_au/saves/cky/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
 OUTPUT_ROOT="/mnt/hdfs/if_au/saves/cky/eval_results/${EXPERIMENT_NAME}"
 
-DATASETS=("aime" "aime25" "amc" "math" "minerva" "olympiad_bench")
-# CHECKPOINT_ROOT="/mnt/luoyingfeng/changkaiyan/ShorterBetter/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
+DATASETS=("aime" "aime25" "amc" "math" "minerva" "olympiad_bench" "mathqa" "mmlu" "bbh")
+# CHECKPOINT_ROOT="/mnt/luoyingfeng/changkaiyan/verl-process/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
 # OUTPUT_ROOT="/mnt/luoyingfeng/changkaiyan/verl-process/eval/eval_results/${EXPERIMENT_NAME}"
-# DATASETS=("aime" "math")
+# DATASETS=("mathqa" "mmlu" "bbh")
+# ALL_PORTS=(8010 8011)
+# DEVICES=(0 1)
 
 ALL_PORTS=(8010 8011 8012 8013 8014 8015 8016 8017)
 DEVICES=(0 1 2 3 4 5 6 7)
