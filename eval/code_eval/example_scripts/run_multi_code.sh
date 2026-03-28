@@ -21,6 +21,7 @@ JOBS=(
   "Redundancy_DAPO DS1.5B_8k_2e_4_7168_DAPO_l1"
   "Redundancy_DAPO qwen3_1.7B_8k_redundancy_self_correct_1_5e-4_DAPO"
   "Redundancy_DAPO qwen3_1.7B_8k_DAPO_base"
+  "Redundancy_DAPO qwen3_8B_8k_redundancy_self_correct_1_5e-4_DAPO"
 )
 
 for job in "${JOBS[@]}"; do

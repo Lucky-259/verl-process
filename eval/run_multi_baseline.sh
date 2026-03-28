@@ -23,13 +23,17 @@ BASE_SCRIPT="eval/vllm_baseline_8k.sh"   # 改成你的实际脚本路径
 
 # 你可以在这里列出多组：PROJECT_NAME EXPERIMENT_NAME [REPEAT] [CONCURRENCY]
 JOBS=(
-  "AdaptThink-1.5B-delta0.05 16 200"
+  "Qwen3-1.7B 16 200"
+  "DeepSeek-R1-Distill-Qwen-1.5B 16 200"
   "L1-Qwen-1.5B-Max 16 200"
+  "DLER-R1-1.5B-Research 16 200"
+  "AdaptThink-1.5B-delta0.05 16 200"
   "alpha_0.1_DeepSeek-R1-Distill-Qwen-1.5B 16 200"
   "DeepSeek-R1-Distill-Qwen-1.5B-thinkprune-iter2k 16 200"
   "Laser-DE-L4096-1.5B 16 200"
   "Laser-L8192-1.5B 16 200"
-  "DLER-R1-1.5B-Research 16 200"
+  "Qwen3-8B 16 200"
+  "DeepSeek-R1-Distill-Qwen-7B 16 200"
 )
 
 for job in "${JOBS[@]}"; do

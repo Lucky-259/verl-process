@@ -14,13 +14,16 @@ BASE_SCRIPT="eval/code_eval/example_scripts/eval_code_baseline.sh"   # 改成你
 
 # 你可以在这里列出多组：PROJECT_NAME EXPERIMENT_NAME [REPEAT] [CONCURRENCY]
 JOBS=(
-  "AdaptThink-1.5B-delta0.05 16 200"
-  "L1-Qwen-1.5B-Max 16 200"
-  "alpha_0.1_DeepSeek-R1-Distill-Qwen-1.5B 16 200"
-  "DeepSeek-R1-Distill-Qwen-1.5B-thinkprune-iter2k 16 200"
-  "Laser-DE-L4096-1.5B 16 200"
-  "Laser-L8192-1.5B 16 200"
-  "DLER-R1-1.5B-Research 16 200"
+  "DeepSeek-R1-Distill-Qwen-1.5B"
+  "Qwen3-1.7B"
+  "L1-Qwen-1.5B-Max"
+  "DLER-R1-1.5B-Research"
+  "AdaptThink-1.5B-delta0.05"
+  "alpha_0.1_DeepSeek-R1-Distill-Qwen-1.5B"
+  "DeepSeek-R1-Distill-Qwen-1.5B-thinkprune-iter2k"
+  "Laser-DE-L4096-1.5B"
+  "Laser-L8192-1.5B"
+  "DeepSeek-R1-Distill-Qwen-7B"
 )
 
 for job in "${JOBS[@]}"; do
