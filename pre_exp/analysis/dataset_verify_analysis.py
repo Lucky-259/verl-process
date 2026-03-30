@@ -15,6 +15,7 @@ from math_verify import parse, ExprExtractionConfig, LatexExtractionConfig
 from tqdm import tqdm
 import sys
 sys.path.append('/opt/tiger/hqz_debug/cky/verl-process')
+# sys.path.append('/mnt/luoyingfeng/changkaiyan/verl-process')
 from deepscaler.rewards.math_utils.utils import grade_answer_verl
 
 THINK_END_TAG = "</think>"
@@ -769,6 +770,7 @@ def main():
     ap.add_argument(
         "--tokenizer_path",
         default="/mnt/hdfs/if_au/models/DeepSeek-R1-Distill-Qwen-1.5B",
+        # default="/mnt/luoyingfeng/model_card/DeepSeek-R1-Distill-Qwen-1.5B",
         help="Tokenizer path for token counting",
     )
     ap.add_argument(
@@ -820,7 +822,7 @@ def main():
     
     if dataset_stats:
         # 将统计信息保存到CSV文件
-        csv_path = output_dir / "dataset_statistics.csv"
+        csv_path = output_dir / "AST_statistics.csv"
 
         with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
@@ -836,6 +838,10 @@ def main():
             # 写入冗余占比行
             proportion_row = ['Proportion (%)'] + [dataset_stats[ds][1] * 100 for ds in dataset_stats.keys()]
             writer.writerow(proportion_row)
+
+            # 写入冗余长度行
+            redundant_length_row = ['Redundant Length'] + [dataset_stats[ds][0] * dataset_stats[ds][1] for ds in dataset_stats.keys()]
+            writer.writerow(redundant_length_row)
 
         print(f"\nDataset statistics saved to: {csv_path}")
 
