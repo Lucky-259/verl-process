@@ -3,6 +3,7 @@
 
 PROJECT_NAME=${1}
 EXPERIMENT_NAME=${2}
+SELECTED_STEPS=${3:-""}
 # CHECKPOINT_ROOT="/mnt/luoyingfeng/changkaiyan/verl-process/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
 # OUTPUT_DIR=eval/eval_results
 CHECKPOINT_ROOT="/mnt/hdfs/if_au/saves/cky/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
@@ -33,7 +34,30 @@ CHECKPOINT_DIRS=$(find "$CHECKPOINT_ROOT" -maxdepth 1 -type d -name "global_step
 
 if [ -z "$CHECKPOINT_DIRS" ]; then
     echo "No global_step directories found in $CHECKPOINT_ROOT"
-    exit 1
+    exit 0
+fi
+
+if [ -n "$SELECTED_STEPS" ]; then
+    echo "Only evaluating selected steps: $SELECTED_STEPS"
+    FILTERED_DIRS=""
+
+    IFS=',' read -r -a STEP_LIST <<< "$SELECTED_STEPS"
+    for STEP_ID in "${STEP_LIST[@]}"; do
+        STEP_ID=$(echo "$STEP_ID" | xargs)   # 去掉空格
+        STEP_DIR="$CHECKPOINT_ROOT/global_step_$STEP_ID"
+        if [ -d "$STEP_DIR" ]; then
+            FILTERED_DIRS="$FILTERED_DIRS $STEP_DIR"
+        else
+            echo "Warning: selected checkpoint not found: $STEP_DIR"
+        fi
+    done
+
+    CHECKPOINT_DIRS="$FILTERED_DIRS"
+fi
+
+if [ -z "$CHECKPOINT_DIRS" ]; then
+    echo "No matching checkpoints to evaluate."
+    exit 0
 fi
 
 for STEP_DIR in $CHECKPOINT_DIRS; do
