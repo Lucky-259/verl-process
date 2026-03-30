@@ -33,6 +33,7 @@ from transformers import AutoTokenizer # Moved import to top
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", type=str, help="Path to the model directory or name.")
 parser.add_argument("--save_dir", help="Directory to save samples and results.")
+parser.add_argument("--local_cache_dir", type=str, default="/tmp/hf_local_cache")
 parser.add_argument("--num-samples-per-task", type=int, default=1, help="Number of samples to generate per task (used by sampling_params n).") # Note: n=1 is hardcoded below currently
 # for pass@1
 # https://github.com/bigcode-project/bigcode-evaluation-harness/blob/c326b51eef25f96ca9b8d22300612b64f3253992/docs/README.md?plain=1#L44
@@ -190,8 +191,12 @@ problems_dataset = Dataset.from_pandas(problems_df)
 # --- Prepare prompts ---
 print("Preparing prompts...")
 # Define cache file paths relative to save_dir
-sig_cache_path = os.path.join(args.save_dir, "cache-human_eval-sig.arrow")
-conv_cache_path = os.path.join(args.save_dir, "cache-human_eval-conv.arrow")
+# sig_cache_path = os.path.join(args.save_dir, "cache-human_eval-sig.arrow")
+# conv_cache_path = os.path.join(args.save_dir, "cache-human_eval-conv.arrow")
+map_cache_dir = os.path.join(args.local_cache_dir, "map_cache")
+os.makedirs(map_cache_dir, exist_ok=True)
+sig_cache_path = os.path.join(map_cache_dir, "cache-human_eval-sig.arrow")
+conv_cache_path = os.path.join(map_cache_dir, "cache-human_eval-conv.arrow")
 
 # Use cache files for faster re-runs if prompts don't change
 problems_dataset = problems_dataset.map(
@@ -240,7 +245,7 @@ except Exception as e:
 # Add the *extracted* completions to the dataset
 problems_dataset = problems_dataset.add_column("completion", completions)
 
-problems_dataset = problems_dataset.map(lambda x: {"completion": x["completion"]})
+# problems_dataset = problems_dataset.map(lambda x: {"completion": x["completion"]})
 
 # Convert to list of dictionaries for saving
 samples_list = []
