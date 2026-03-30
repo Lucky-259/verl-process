@@ -74,7 +74,7 @@ def generate_sample_batch(question_list):
         llm = LLM(
             model=args.model,
             trust_remote_code=True,
-            tensor_parallel_size=torch.cuda.device_count()
+            tensor_parallel_size=4
         )
     except Exception as e:
         print(f"Error initializing LLM: {e}")
