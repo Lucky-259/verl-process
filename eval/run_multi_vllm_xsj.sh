@@ -14,8 +14,8 @@ BASE_SCRIPT="eval/vllm_all_8k_xsj.sh"   # 改成你的实际脚本路径
 
 # 你可以在这里列出多组：PROJECT_NAME EXPERIMENT_NAME [REPEAT] [CONCURRENCY]
 JOBS=(
-  "AVPO AVPO_v2-Qwen3-1.7B-Base-beta_0.01-lambda_0.01 16 100 120"
-  "AVPO DAPO-Qwen3-1_7B-Base 16 100 340"
+  "AVPO AVPO_v2-Qwen3-1.7B-Base-beta_0.01-lambda_0.01 8 100 120"
+  "AVPO DAPO-Qwen3-1_7B-Base 8 100 340"
 )
 
 # # Baseline
