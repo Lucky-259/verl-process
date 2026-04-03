@@ -19,6 +19,7 @@ from .naive import NaiveRewardManager
 from .prime import PrimeRewardManager
 from .process import ProcessRewardManager
 from .shorter import ShorterRewardManager
+from .shorter_dapo import DAPOShorterRewardManager
 from .redundancy import RedundancyRewardManager
 from .redundancy_dapo import DAPORedundancyRewardManager
 #from .redundancy_llm import RedundancyLlmRewardManager
@@ -32,6 +33,7 @@ __all__ = [
     "PrimeRewardManager",
     "ProcessRewardManager",
     "ShorterRewardManager",
+    "DAPOShorterRewardManager",
     "RedundancyRewardManager",
     "DAPORedundancyRewardManager",
     #"RedundancyLlmRewardManager",
