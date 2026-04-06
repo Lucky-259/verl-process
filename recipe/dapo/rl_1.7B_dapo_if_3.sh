@@ -19,6 +19,7 @@ PROJECT_NAME='Redundancy_DAPO'
 EXPERIMENT_NAME='qwen3_1.7B_8k_redundancy_self_correct_1_3e-4_DAPO'
 RUN_DIR="$ROOT_DIR/checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}"
 # LOG_FILE="/opt/tiger/hqz_debug/cky/verl-process/${PROJECT_NAME}_${EXPERIMENT_NAME}.log"
+mkdir -p "$RUN_DIR"
 
 train_prompt_bsz=128
 gen_prompt_bsz=$((train_prompt_bsz * 3))
@@ -95,6 +96,6 @@ python3 -u -m recipe.dapo.main_dapo \
     trainer.nnodes=1 \
     trainer.val_before_train=False \
     trainer.test_freq=-1 \
-    trainer.save_freq=50 \
+    trainer.save_freq=10 \
     trainer.default_local_dir="$RUN_DIR" \
-    trainer.total_training_steps=500 
+    trainer.total_training_steps=400 
