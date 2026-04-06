@@ -13,7 +13,8 @@ export PROJECT_HOME="verl-process"
 # export PYTHONPATH="${PROJECT_HOME}:$PYTHONPATH"
 export VLLM_ATTENTION_BACKEND=XFORMERS
 export DATASET_DIR="deepscaler/data"
-ROOT_DIR=/mnt/hdfs/if_au/saves/cky
+# ROOT_DIR=/mnt/hdfs/if_au/saves/cky
+ROOT_DIR=/tmp/cky
 MODEL_PATH="/mnt/hdfs/if_au/models/Qwen3-1.7B"
 PROJECT_NAME='Redundancy_DAPO'
 EXPERIMENT_NAME='qwen3_1.7B_8k_redundancy_self_correct_1_3e-4_DAPO'
@@ -96,6 +97,6 @@ python3 -u -m recipe.dapo.main_dapo \
     trainer.nnodes=1 \
     trainer.val_before_train=False \
     trainer.test_freq=-1 \
-    trainer.save_freq=10 \
+    trainer.save_freq=50 \
     trainer.default_local_dir="$RUN_DIR" \
     trainer.total_training_steps=400 
