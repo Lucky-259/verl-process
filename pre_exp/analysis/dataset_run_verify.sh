@@ -1,39 +1,46 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# 获取所有参数
-ALL_ARGS=("$@")
-NUM_ARGS=$#
-
-# 提取最后两个参数
-BASE_DIR="${ALL_ARGS[0]}"
-MODEL_PREFIX="${ALL_ARGS[1]}"
-EXTRACTION="${ALL_ARGS[$((NUM_ARGS-2))]}"
-WAY="${ALL_ARGS[$((NUM_ARGS-1))]}"
-MIN_SCORE=2
-
-if [ "$#" -ne 4 ]; then
-  echo "❌ 用法: ./run_verify.sh <INPUT_PATH> <OUTPUT_PATH> <EXTRACTION> <WAY>"
-  echo "例子: ./run_verify.sh eval/baseline_res/DeepSeek-R1-Distill-Qwen-1.5B✓ eval_results/analysis/DeepSeek-R1-Distill-Qwen-1.5B✓ self correct"
+if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
+  echo "❌ 用法: bash dataset_run_verify.sh <BASE_ROOT_DIR> <STEP_LIST> [EXTRACTION] [WAY]"
+  echo "例子: bash dataset_run_verify.sh /mnt/hdfs/if_au/saves/cky/eval_results/DS1.5B_8k_DAPO_base 50,100,150 self correct"
   exit 1
 fi
 
-# 提取数据集名称（除了最后两个参数）
+BASE_ROOT_DIR="$1"
+STEP_LIST_RAW="$2"
+EXTRACTION="${3:-self}"
+WAY="${4:-correct}"
+MIN_SCORE=2
+
 DATASETS=("aime" "aime25" "amc" "math" "minerva" "olympiad_bench")
 
-# 构建输入文件路径和数据集名称数组
+
+IFS=',' read -r -a STEPS <<< "$STEP_LIST_RAW"
+
 INPUT_FILES=()
 DATASET_NAMES=()
+STEP_NAMES=()
 
-for DATASET in "${DATASETS[@]}"; do
-  INPUT_JSON="${BASE_DIR}/${DATASET}/results_details.json"
-  if [ ! -f "$INPUT_JSON" ]; then
-    echo "⚠️  警告：找不到输入文件: $INPUT_JSON"
-    echo "  将跳过此数据集"
-  else
-    INPUT_FILES+=("$INPUT_JSON")
-    DATASET_NAMES+=("$DATASET")
+for STEP in "${STEPS[@]}"; do
+  STEP="$(echo "$STEP" | xargs)"
+  STEP_DIR="${BASE_ROOT_DIR}/global_step_${STEP}"
+
+  if [ ! -d "$STEP_DIR" ]; then
+    echo "⚠️  警告：找不到 step 目录: $STEP_DIR"
+    continue
   fi
+
+  for DATASET in "${DATASETS[@]}"; do
+    INPUT_JSON="${STEP_DIR}/${DATASET}/results_details.json"
+    if [ ! -f "$INPUT_JSON" ]; then
+      echo "⚠️  警告：找不到输入文件: $INPUT_JSON"
+    else
+      INPUT_FILES+=("$INPUT_JSON")
+      DATASET_NAMES+=("$DATASET")
+      STEP_NAMES+=("$STEP")
+    fi
+  done
 done
 
 if [ ${#INPUT_FILES[@]} -eq 0 ]; then
@@ -41,24 +48,26 @@ if [ ${#INPUT_FILES[@]} -eq 0 ]; then
   exit 1
 fi
 
+OUTPUT_DIR="${BASE_ROOT_DIR}/ast_step_analysis-${EXTRACTION}-${WAY}"
+
 echo
 echo "=============================="
-echo "Processing ${#DATASET_NAMES[@]} datasets"
-echo "Datasets: ${DATASET_NAMES[@]}"
+echo "Base root: $BASE_ROOT_DIR"
+echo "Steps: ${STEPS[*]}"
+echo "Found ${#INPUT_FILES[@]} input files"
 echo "Extraction: $EXTRACTION"
 echo "Way: $WAY"
+echo "Output dir: $OUTPUT_DIR"
 echo "=============================="
 
-OUTPUT_DIR="${MODEL_PREFIX}-${EXTRACTION}-${WAY}"
-
-echo "▶ Running verify_analysis.py for all datasets"
 python dataset_verify_analysis.py \
   --inputs "${INPUT_FILES[@]}" \
   --datasets "${DATASET_NAMES[@]}" \
+  --steps "${STEP_NAMES[@]}" \
   --output_dir "$OUTPUT_DIR" \
   --extraction "$EXTRACTION" \
   --way "$WAY" \
   --min_score "$MIN_SCORE"
 
 echo
-echo "🎉 All datasets finished. Results saved to: $OUTPUT_DIR"
+echo "🎉 All steps finished. Results saved to: $OUTPUT_DIR"
